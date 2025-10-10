@@ -26,6 +26,7 @@ target/
 *.swo
 *~
 .DS_Store
+docs/
 
 # OS
 .DS_Store

@@ -36,7 +36,9 @@ export interface Match {
   tripAId: string;
   tripBId: string;
   matchScore: number; // 0-100
+  routeOverlap: number; // Percentage of route overlap (0-100)
   proximityScore: number; // How close routes are
+  proximity: string; // Human-readable proximity (e.g., "15-20km away")
   dateOverlap: number; // Days of overlap
   interestSimilarity: number; // 0-1
   status: MatchStatus;

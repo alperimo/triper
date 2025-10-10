@@ -15,6 +15,9 @@ interface TripState {
   setMyTrips: (trips: Trip[]) => void;
 }
 
+// Helper to get trips array
+export const getTrips = (state: TripState) => state.myTrips;
+
 export const useTripStore = create<TripState>((set) => ({
   currentTrip: null,
   myTrips: [],
