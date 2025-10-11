@@ -1,0 +1,24 @@
+[package]
+name = "triper-mxe"
+version = "0.1.0"
+description = "Confidential MPC program for Triper - encrypted travel data and private matching"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "triper_mxe"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"
+borsh = "0.10.3"
+
+# Note: Arcium SDK will be added when available
+# For now, we'll structure the program to be MXE-compatible
