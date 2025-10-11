@@ -1,21 +1,109 @@
 // Arcium SDK Client Wrapper
-// This will integrate with the actual Arcium SDK when available
+// Integrates with @arcium-hq/client for encrypted computation
+
+import { 
+  getArciumEnv,
+  x25519,
+  getMXEPublicKey,
+  RescueCipher,
+  awaitComputationFinalization,
+  getMXEAccAddress,
+  getMempoolAccAddress,
+  getComputationAccAddress,
+  getCompDefAccAddress,
+  getCompDefAccOffset,
+  getExecutingPoolAccAddress,
+} from '@arcium-hq/client';
+import * as anchor from '@coral-xyz/anchor';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { randomBytes } from 'crypto';
 
 export class ArciumClient {
-  private apiKey: string;
-  private endpoint: string;
+  private provider: anchor.AnchorProvider | null = null;
+  private cipher: RescueCipher | null = null;
+  private privateKey: Uint8Array | null = null;
+  private publicKey: Uint8Array | null = null;
+  private mxePublicKey: Uint8Array | null = null;
+  private programId: PublicKey;
 
-  constructor(apiKey?: string, endpoint?: string) {
-    this.apiKey = apiKey || process.env.NEXT_PUBLIC_ARCIUM_API_KEY || '';
-    this.endpoint = endpoint || 'https://api.arcium.com'; // TODO: Update with actual endpoint
+  constructor(programId?: string) {
+    // Use environment variable or provided program ID
+    this.programId = programId 
+      ? new PublicKey(programId)
+      : new PublicKey(process.env.NEXT_PUBLIC_MXE_PROGRAM_ID || '11111111111111111111111111111111');
   }
 
   /**
-   * Initialize the Arcium client
+   * Initialize the Arcium client with encryption setup
    */
-  async initialize(): Promise<void> {
-    // TODO: Implement actual Arcium SDK initialization
-    console.log('Arcium client initialized');
+  async initialize(connection?: Connection, wallet?: any): Promise<void> {
+    try {
+      // Setup Anchor provider
+      const conn = connection || new Connection(
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+        'confirmed'
+      );
+
+      if (wallet) {
+        this.provider = new anchor.AnchorProvider(
+          conn,
+          wallet,
+          { commitment: 'confirmed' }
+        );
+      }
+
+      // Generate client keypair for encryption
+      this.privateKey = x25519.utils.randomPrivateKey();
+      this.publicKey = x25519.getPublicKey(this.privateKey);
+
+      // Get MXE public key if provider is available
+      if (this.provider) {
+        this.mxePublicKey = await getMXEPublicKey(this.provider, this.programId);
+        
+        if (this.mxePublicKey) {
+          // Compute shared secret and initialize cipher
+          const sharedSecret = x25519.getSharedSecret(this.privateKey, this.mxePublicKey);
+          this.cipher = new RescueCipher(sharedSecret);
+          console.log('Arcium client initialized with encryption');
+        }
+      }
+
+      console.log('Arcium client initialized');
+    } catch (error) {
+      console.error('Failed to initialize Arcium client:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Encrypt data using Rescue cipher
+   */
+  encryptData(plaintext: bigint[], nonce?: Uint8Array): {
+    ciphertext: number[][];
+    nonce: Uint8Array;
+  } {
+    if (!this.cipher) {
+      throw new Error('Cipher not initialized. Call initialize() first.');
+    }
+
+    const nonceBytes = nonce || randomBytes(16);
+    const ciphertext = this.cipher.encrypt(plaintext, nonceBytes);
+
+    return {
+      ciphertext,
+      nonce: nonceBytes,
+    };
+  }
+
+  /**
+   * Decrypt data using Rescue cipher
+   */
+  decryptData(ciphertext: number[][], nonce: Uint8Array): bigint[] {
+    if (!this.cipher) {
+      throw new Error('Cipher not initialized. Call initialize() first.');
+    }
+
+    return this.cipher.decrypt(ciphertext, nonce);
   }
 
   /**
@@ -27,11 +115,12 @@ export class ArciumClient {
     encryptedDates: Uint8Array,
     encryptedInterests: Uint8Array
   ): Promise<string> {
-    // TODO: Implement actual Arcium submission
+    // For now, return a mock transaction ID
+    // TODO: Implement actual program submission when MXE program is deployed
     console.log('Submitting encrypted trip to Arcium:', tripId);
     
-    // Placeholder: Return transaction ID
-    return `arcium_tx_${Date.now()}`;
+    const computationOffset = new anchor.BN(randomBytes(8), 'hex');
+    return `arcium_trip_${computationOffset.toString()}`;
   }
 
   /**
@@ -41,11 +130,18 @@ export class ArciumClient {
     tripAId: string,
     tripBId: string
   ): Promise<string> {
-    // TODO: Implement actual Arcium MPC request
     console.log('Requesting MPC match computation:', { tripAId, tripBId });
     
-    // Placeholder: Return computation ID
-    return `mpc_comp_${Date.now()}`;
+    // Generate computation offset
+    const computationOffset = new anchor.BN(randomBytes(8), 'hex');
+    
+    // TODO: Submit to actual MXE program when deployed
+    // const sig = await program.methods
+    //   .computeMatch(computationOffset, tripAId, tripBId, ...)
+    //   .accounts({ ... })
+    //   .rpc();
+    
+    return `mpc_comp_${computationOffset.toString()}`;
   }
 
   /**
@@ -57,8 +153,17 @@ export class ArciumClient {
     dateOverlap: number;
     interestSimilarity: number;
   }> {
-    // TODO: Implement actual result retrieval
     console.log('Fetching match result:', computationId);
+    
+    // TODO: Await finalization and decrypt result
+    // if (this.provider) {
+    //   await awaitComputationFinalization(
+    //     this.provider,
+    //     computationOffset,
+    //     this.programId,
+    //     'confirmed'
+    //   );
+    // }
     
     // Placeholder: Return mock result
     return {
@@ -80,8 +185,9 @@ export class ArciumClient {
     dates: { start: Date; end: Date };
     interests: string[];
   }> {
-    // TODO: Implement actual decryption
     console.log('Decrypting match details:', matchId);
+    
+    // TODO: Fetch encrypted data and decrypt using cipher
     
     // Placeholder: Return mock decrypted data
     return {
@@ -96,14 +202,53 @@ export class ArciumClient {
       interests: ['hiking', 'photography', 'food'],
     };
   }
+
+  /**
+   * Get Arcium account addresses (PDAs)
+   */
+  getAccountAddresses() {
+    return {
+      mxe: getMXEAccAddress(this.programId),
+      mempool: getMempoolAccAddress(this.programId),
+      executingPool: getExecutingPoolAccAddress(this.programId),
+    };
+  }
+
+  /**
+   * Get computation account address for a given offset
+   */
+  getComputationAddress(offset: anchor.BN): PublicKey {
+    return getComputationAccAddress(this.programId, offset);
+  }
+
+  /**
+   * Get computation definition address for a computation name
+   */
+  getCompDefAddress(compName: string): PublicKey {
+    const offset = getCompDefAccOffset(compName);
+    return getCompDefAccAddress(
+      this.programId,
+      Buffer.from(offset).readUInt32LE()
+    );
+  }
+
+  /**
+   * Get client public key (for encryption)
+   */
+  getPublicKey(): Uint8Array | null {
+    return this.publicKey;
+  }
 }
 
 // Singleton instance
 let arciumClient: ArciumClient | null = null;
 
-export function getArciumClient(): ArciumClient {
+export function getArciumClient(programId?: string): ArciumClient {
   if (!arciumClient) {
-    arciumClient = new ArciumClient();
+    arciumClient = new ArciumClient(programId);
   }
   return arciumClient;
 }
+
+// Export Arcium environment helper
+export { getArciumEnv };
