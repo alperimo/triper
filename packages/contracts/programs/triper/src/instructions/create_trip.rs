@@ -7,13 +7,10 @@ pub struct CreateTrip<'info> {
         init,
         payer = user,
         space = Trip::LEN,
-        seeds = [b"trip", user.key().as_ref(), mxe_data_account.key().as_ref()],
+        seeds = [b"trip", user.key().as_ref(), &route_hash],
         bump
     )]
     pub trip: Account<'info, Trip>,
-    
-    /// CHECK: This is the MXE account from triper-mxe program that stores encrypted data
-    pub mxe_data_account: UncheckedAccount<'info>,
     
     #[account(mut)]
     pub user: Signer<'info>,
@@ -28,14 +25,15 @@ pub fn handler(
     let trip = &mut ctx.accounts.trip;
     
     trip.owner = ctx.accounts.user.key();
-    trip.mxe_data_account = ctx.accounts.mxe_data_account.key();
     trip.route_hash = route_hash;
     trip.created_at = Clock::get()?.unix_timestamp;
     trip.is_active = true;
+    trip.computation_count = 0;
     trip.bump = ctx.bumps.trip;
     
     msg!("Trip created: {}", trip.key());
-    msg!("MXE data account: {}", trip.mxe_data_account);
+    msg!("Route hash: {:?}", route_hash);
+    msg!("Encrypted trip data will be processed via Arcium MXE");
     
     Ok(())
 }

@@ -1,7 +1,6 @@
 [workspace]
 members = [
-    "programs/triper",
-    "programs/triper-mxe"
+    "programs/triper"
 ]
 resolver = "2"
 

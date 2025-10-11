@@ -4,11 +4,9 @@ skip-lint = false
 
 [programs.devnet]
 triper = "Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY"
-triper_mxe = "DXXjZXXGXh93RNoqsGMzrFJ2otJwQu4r7fxx68JMRPrW"
 
 [programs.localnet]
 triper = "Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY"
-triper_mxe = "DXXjZXXGXh93RNoqsGMzrFJ2otJwQu4r7fxx68JMRPrW"
 
 [registry]
 url = "https://api.apr.dev"
