@@ -1,0 +1,423 @@
+{
+  "address": "Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY",
+  "metadata": {
+    "name": "triper",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Privacy-preserving travel companion matching using Arcium MPC"
+  },
+  "instructions": [
+    {
+      "name": "accept_match",
+      "docs": [
+        "Accept a match"
+      ],
+      "discriminator": [
+        47,
+        107,
+        76,
+        149,
+        208,
+        223,
+        186,
+        191
+      ],
+      "accounts": [
+        {
+          "name": "match_record",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_trip",
+      "docs": [
+        "Create a new trip (public metadata only)"
+      ],
+      "discriminator": [
+        52,
+        111,
+        109,
+        110,
+        255,
+        25,
+        133,
+        204
+      ],
+      "accounts": [
+        {
+          "name": "trip",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "mxe_data_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mxe_data_account"
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "route_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "deactivate_trip",
+      "docs": [
+        "Deactivate a trip"
+      ],
+      "discriminator": [
+        195,
+        147,
+        215,
+        89,
+        103,
+        18,
+        151,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "trip",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "record_match",
+      "docs": [
+        "Record a match (called by backend after MXE computation)"
+      ],
+      "discriminator": [
+        148,
+        41,
+        163,
+        203,
+        58,
+        251,
+        192,
+        228
+      ],
+      "accounts": [
+        {
+          "name": "match_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  116,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trip_a"
+              },
+              {
+                "kind": "account",
+                "path": "trip_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trip_a"
+        },
+        {
+          "name": "trip_b"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "match_score",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "reject_match",
+      "docs": [
+        "Reject a match"
+      ],
+      "discriminator": [
+        72,
+        204,
+        109,
+        175,
+        97,
+        58,
+        186,
+        28
+      ],
+      "accounts": [
+        {
+          "name": "match_record",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "MatchRecord",
+      "discriminator": [
+        114,
+        83,
+        48,
+        236,
+        239,
+        237,
+        21,
+        85
+      ]
+    },
+    {
+      "name": "Trip",
+      "discriminator": [
+        181,
+        162,
+        236,
+        3,
+        69,
+        140,
+        211,
+        173
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMatchStatus",
+      "msg": "Invalid match status for this operation"
+    },
+    {
+      "code": 6001,
+      "name": "Unauthorized",
+      "msg": "User not authorized for this operation"
+    },
+    {
+      "code": 6002,
+      "name": "TripNotActive",
+      "msg": "Trip is not active"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidMxeAccount",
+      "msg": "Invalid MXE account reference"
+    }
+  ],
+  "types": [
+    {
+      "name": "MatchRecord",
+      "docs": [
+        "Match record - Stores match status and consent",
+        "Actual match computation happens in triper-mxe program"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trip_a",
+            "docs": [
+              "First trip public key"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "trip_b",
+            "docs": [
+              "Second trip public key"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "match_score",
+            "docs": [
+              "Match score (0-100)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "Match status"
+            ],
+            "type": {
+              "defined": {
+                "name": "MatchStatus"
+              }
+            }
+          },
+          {
+            "name": "trip_a_accepted",
+            "docs": [
+              "Whether trip_a owner accepted"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "trip_b_accepted",
+            "docs": [
+              "Whether trip_b owner accepted"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MatchStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Mutual"
+          },
+          {
+            "name": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Trip",
+      "docs": [
+        "Public trip metadata - NO SENSITIVE DATA",
+        "All sensitive data (encrypted route, dates, interests) is stored in triper-mxe program"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "docs": [
+              "Owner's public key"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mxe_data_account",
+            "docs": [
+              "Reference to the MXE account that holds encrypted trip data"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "route_hash",
+            "docs": [
+              "Hash of the route for verification (non-sensitive)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "is_active",
+            "docs": [
+              "Whether trip is active for matching"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA derivation"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

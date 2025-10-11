@@ -3,10 +3,10 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-triper = "11111111111111111111111111111111"
+triper = "Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY"
 
 [programs.localnet]
-triper = "11111111111111111111111111111111"
+triper = "Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY"
 
 [registry]
 url = "https://api.apr.dev"

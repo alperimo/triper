@@ -13,7 +13,7 @@ pub use instructions::*;
 pub use state::*;
 pub use error::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY");
 
 #[program]
 pub mod triper {
