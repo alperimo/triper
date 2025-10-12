@@ -25,13 +25,17 @@ const COMP_DEF_OFFSET_COMPUTE_TRIP_MATCH: u32 = comp_def_offset("compute_trip_ma
 pub mod triper {
     use super::*;
 
+    // Accept a match
+    pub fn accept_match(ctx: Context<AcceptMatch>) -> Result<()> {
+        instructions::accept_match_handler(ctx)
+    }
+
     /// Create a new trip (public metadata only)
     pub fn create_trip(
         ctx: Context<CreateTrip>,
         route_hash: [u8; 32]
     ) -> Result<()> {
-        instructions::create_trip::handler(ctx, route_hash);
-        Ok(())
+        instructions::create_trip_handler(ctx, route_hash)
     }
 
     /// Initialize the computation definition for match computation
@@ -94,5 +98,32 @@ pub mod triper {
         });
 
         Ok(())
+    }
+
+    /// Deactivate a trip
+    pub fn deactivate_trip(ctx: Context<DeactivateTrip>) -> Result<()> {
+        instructions::deactivate_trip_handler(ctx)
+    }
+
+    /// Record a match (called after decrypting scores on client)
+    pub fn record_match(
+        ctx: Context<RecordMatch>,
+        route_score: u8,
+        date_score: u8,
+        interest_score: u8,
+        total_score: u8,
+    ) -> Result<()> {
+        instructions::record_match_handler(
+            ctx,
+            route_score,
+            date_score,
+            interest_score,
+            total_score,
+        )
+    }
+
+    /// Reject a match
+    pub fn reject_match(ctx: Context<RejectMatch>) -> Result<()> {
+        instructions::reject_match_handler(ctx)
     }
 }

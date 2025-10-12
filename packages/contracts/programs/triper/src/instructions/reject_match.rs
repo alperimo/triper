@@ -19,7 +19,7 @@ pub struct RejectMatch<'info> {
     pub user: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<RejectMatch>) -> Result<()> {
+pub fn reject_match_handler(ctx: Context<RejectMatch>) -> Result<()> {
     let match_account = &mut ctx.accounts.match_account;
     let trip_key = ctx.accounts.trip.key();
     

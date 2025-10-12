@@ -17,7 +17,7 @@ pub struct DeactivateTrip<'info> {
     pub user: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<DeactivateTrip>) -> Result<()> {
+pub fn deactivate_trip_handler(ctx: Context<DeactivateTrip>) -> Result<()> {
     let trip = &mut ctx.accounts.trip;
     
     trip.is_active = false;

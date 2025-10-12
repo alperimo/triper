@@ -26,7 +26,7 @@ pub struct RecordMatch<'info> {
     pub authority: Signer<'info>,
 }
 
-pub fn handler(
+pub fn record_match_handler(
     ctx: Context<RecordMatch>,
     route_score: u8,
     date_score: u8,

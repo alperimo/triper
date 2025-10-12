@@ -19,7 +19,7 @@ pub struct AcceptMatch<'info> {
     pub user: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<AcceptMatch>) -> Result<()> {
+pub fn accept_match_handler(ctx: Context<AcceptMatch>) -> Result<()> {
     let match_account = &mut ctx.accounts.match_account;
     let user_key = ctx.accounts.user.key();
     

@@ -19,7 +19,7 @@ pub struct CreateTrip<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
+pub fn create_trip_handler(
     ctx: Context<CreateTrip>,
     route_hash: [u8; 32]
 ) -> Result<()> {
