@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::error::ErrorCode;
-use crate::state::{Match, MatchStatus, Trip};
+use crate::state::{MatchRecord, MatchStatus, Trip};
 
 #[derive(Accounts)]
 pub struct AcceptMatch<'info> {
@@ -8,7 +8,7 @@ pub struct AcceptMatch<'info> {
         mut,
         constraint = match_account.status == MatchStatus::Pending @ ErrorCode::InvalidMatchStatus
     )]
-    pub match_account: Account<'info, Match>,
+    pub match_account: Account<'info, MatchRecord>,
     
     /// Trip account to verify ownership
     #[account(

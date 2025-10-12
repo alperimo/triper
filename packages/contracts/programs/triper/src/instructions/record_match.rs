@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{Match, MatchStatus, Trip};
+use crate::state::{MatchRecord, MatchStatus, Trip};
 
 #[derive(Accounts)]
 pub struct RecordMatch<'info> {
@@ -8,7 +8,7 @@ pub struct RecordMatch<'info> {
         seeds = [b"match", trip_a.key().as_ref(), trip_b.key().as_ref()],
         bump = match_account.bump
     )]
-    pub match_account: Account<'info, Match>,
+    pub match_account: Account<'info, MatchRecord>,
     
     #[account(
         mut,

@@ -7,8 +7,8 @@ pub struct CreateTrip<'info> {
     #[account(
         init,
         payer = user,
-        space = Trip::LEN,
-        seeds = [b"trip", user.key().as_ref(), &route_hash],
+        space = 8 + Trip::INIT_SPACE,
+        seeds = [b"trip", user.key().as_ref(), route_hash.as_ref()],
         bump
     )]
     pub trip: Account<'info, Trip>,
@@ -21,7 +21,7 @@ pub struct CreateTrip<'info> {
 
 pub fn handler(
     ctx: Context<CreateTrip>,
-    route_hash: [u8; 32],
+    route_hash: [u8; 32]
 ) -> Result<()> {
     let trip = &mut ctx.accounts.trip;
     

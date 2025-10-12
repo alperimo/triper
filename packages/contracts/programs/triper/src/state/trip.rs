@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 /// Public trip metadata - NO SENSITIVE DATA
 /// Sensitive data (route, dates, interests) is encrypted and processed via Arcium MXE
 #[account]
+#[derive(InitSpace)]
 pub struct Trip {
     /// Owner's public key
     pub owner: Pubkey,

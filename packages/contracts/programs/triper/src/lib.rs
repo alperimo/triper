@@ -28,9 +28,10 @@ pub mod triper {
     /// Create a new trip (public metadata only)
     pub fn create_trip(
         ctx: Context<CreateTrip>,
-        route_hash: [u8; 32],
+        route_hash: [u8; 32]
     ) -> Result<()> {
-        instructions::create_trip::handler(ctx, route_hash)
+        instructions::create_trip::handler(ctx, route_hash);
+        Ok(())
     }
 
     /// Initialize the computation definition for match computation

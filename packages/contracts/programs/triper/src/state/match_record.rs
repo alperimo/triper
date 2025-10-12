@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 /// Match record - Stores match status and detailed scores
 /// Computation happens via Arcium MXE confidential circuit
 #[account]
-pub struct Match {
+pub struct MatchRecord {
     /// First trip public key
     pub trip_a: Pubkey,
     
@@ -41,7 +41,7 @@ pub struct Match {
     pub bump: u8,
 }
 
-impl Match {
+impl MatchRecord {
     pub const LEN: usize = 8 + // discriminator
         32 + // trip_a
         32 + // trip_b
@@ -59,9 +59,6 @@ impl Match {
     // Alias for compatibility
     pub const SIZE: usize = Self::LEN;
 }
-
-// Alias for backward compatibility
-pub type MatchRecord = Match;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub enum MatchStatus {

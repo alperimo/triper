@@ -1,5 +1,3 @@
-use anchor_lang::prelude::*;
-
 pub mod create_trip;
 pub mod compute_match;
 pub mod record_match;
