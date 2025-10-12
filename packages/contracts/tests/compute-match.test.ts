@@ -121,6 +121,13 @@ describe("Arcium Trip Matching", () => {
     console.log("Queueing computation to MPC network...");
     console.log("  Computation Offset:", computationOffset.toString());
 
+    // Derive the computation account address from the offset
+    const computationAccount = getComputationAccAddress(
+      program.programId,
+      computationOffset
+    );
+    console.log("  Computation Account:", computationAccount.toString());
+
     const queueSig = await program.methods
       .computeTripMatch(
         computationOffset,
@@ -130,10 +137,7 @@ describe("Arcium Trip Matching", () => {
         new anchor.BN(deserializeLE(nonce).toString())
       )
       .accountsPartial({
-        computationAccount: getComputationAccAddress(
-          program.programId,
-          computationOffset
-        ),
+        computationAccount,
         clusterAccount: arciumEnv.arciumClusterPubkey,
         mxeAccount: getMXEAccAddress(program.programId),
         mempoolAccount: getMempoolAccAddress(program.programId),
@@ -142,7 +146,6 @@ describe("Arcium Trip Matching", () => {
           program.programId,
           Buffer.from(getCompDefAccOffset("compute_trip_match")).readUInt32LE()
         ),
-        payer: owner.publicKey,
       })
       .signers([owner])
       .rpc({ skipPreflight: true, commitment: "confirmed" });

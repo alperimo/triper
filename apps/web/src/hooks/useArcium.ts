@@ -1,55 +1,82 @@
+/**
+ * React Hook for Arcium MPC Operations
+ * Uses the new proper implementations
+ */
+
 import { useState, useEffect } from 'react';
-import { getArciumClient } from '@/lib/arcium/client';
+import { useAnchorWallet, useConnection } from '@solana/wallet-adapter-react';
+import { AnchorProvider, Program } from '@coral-xyz/anchor';
+import { PublicKey } from '@solana/web3.js';
 import { 
-  encryptRoute, 
-  encryptDates, 
-  encryptInterests,
-  decryptRoute,
-  decryptDates,
-  decryptInterests,
+  initializeEncryption, 
+  encryptTripData,
+  convertRouteToGridCells,
+  hashRouteForChain,
+  type TripData,
+  type EncryptionContext,
 } from '@/lib/arcium/encryption';
+import { computeTripMatch } from '@/lib/arcium/compute-match';
+import { awaitMatchResult, type MatchResult } from '@/lib/arcium/events';
+import { createTrip } from '@/lib/solana/create-trip';
+import { acceptMatch, rejectMatch } from '@/lib/solana/match-actions';
+import type { Triper } from '@/lib/anchor/types';
+import triperIdl from '@/lib/anchor/triper.json';
 
 interface UseArciumReturn {
-  encrypt: (data: any) => Promise<Uint8Array>;
-  decrypt: (data: Uint8Array) => Promise<any>;
-  encryptTripData: (trip: {
-    route: Array<{ lat: number; lng: number }>;
-    startDate: Date;
-    endDate: Date;
-    interests: string[];
-  }) => Promise<{
-    encryptedRoute: Uint8Array;
-    encryptedDates: Uint8Array;
-    encryptedInterests: Uint8Array;
-  }>;
-  computeMatch: (tripA: string, tripB: string) => Promise<number>;
+  // Encryption
+  initEncryption: () => Promise<EncryptionContext>;
+  encryptTrip: (tripData: TripData) => Promise<{ ciphertext: number[][]; nonce: Uint8Array; publicKey: Uint8Array }>;
+  
+  // Trip Management
+  createTripOnChain: (route: Array<{ lat: number; lng: number }>) => Promise<{ signature: string; tripPDA: PublicKey }>;
+  
+  // MPC Computation
+  computeMatch: (tripA: TripData, tripB: TripData) => Promise<{ computationOffset: any; signature: string }>;
+  waitForMatchResult: (computationAccount: PublicKey, timeoutMs?: number) => Promise<MatchResult | null>;
+  
+  // Match Actions
+  acceptMatchOnChain: (matchPDA: PublicKey, tripPDA: PublicKey) => Promise<string>;
+  rejectMatchOnChain: (matchPDA: PublicKey, tripPDA: PublicKey) => Promise<string>;
+  
+  // State
   isLoading: boolean;
   error: Error | null;
+  program: Program<Triper> | null;
 }
 
 /**
- * Hook for Arcium MPC operations
+ * Hook for Arcium MPC operations with proper wallet integration
  */
 export function useArcium(): UseArciumReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [client, setClient] = useState<ReturnType<typeof getArciumClient> | null>(null);
+  const [program, setProgram] = useState<Program<Triper> | null>(null);
+  
+  const wallet = useAnchorWallet();
+  const { connection } = useConnection();
 
+  // Initialize program when wallet connects
   useEffect(() => {
-    const arciumClient = getArciumClient();
-    arciumClient.initialize().then(() => {
-      setClient(arciumClient);
-    });
-  }, []);
+    if (wallet && connection) {
+      const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
+      const prog = new Program<Triper>(triperIdl as Triper, provider);
+      setProgram(prog);
+    } else {
+      setProgram(null);
+    }
+  }, [wallet, connection]);
 
-  const encrypt = async (data: any): Promise<Uint8Array> => {
+  const initEncryption = async (): Promise<EncryptionContext> => {
+    if (!program) throw new Error('Wallet not connected');
     setIsLoading(true);
     setError(null);
     
     try {
-      // Generic encryption (fallback)
-      const encoder = new TextEncoder();
-      return encoder.encode(JSON.stringify(data));
+      const context = await initializeEncryption(
+        program.provider as AnchorProvider,
+        program.programId
+      );
+      return context;
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -58,14 +85,19 @@ export function useArcium(): UseArciumReturn {
     }
   };
 
-  const decrypt = async (data: Uint8Array): Promise<any> => {
+  const encryptTrip = async (tripData: TripData) => {
+    const context = await initEncryption();
+    return encryptTripData(context, tripData);
+  };
+
+  const createTripOnChain = async (route: Array<{ lat: number; lng: number }>) => {
+    if (!program) throw new Error('Wallet not connected');
     setIsLoading(true);
     setError(null);
     
     try {
-      // Generic decryption (fallback)
-      const decoder = new TextDecoder();
-      return JSON.parse(decoder.decode(data));
+      const result = await createTrip(program, route);
+      return result;
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -74,27 +106,19 @@ export function useArcium(): UseArciumReturn {
     }
   };
 
-  const encryptTripData = async (trip: {
-    route: Array<{ lat: number; lng: number }>;
-    startDate: Date;
-    endDate: Date;
-    interests: string[];
-  }) => {
+  const computeMatch = async (tripA: TripData, tripB: TripData) => {
+    if (!program) throw new Error('Wallet not connected');
     setIsLoading(true);
     setError(null);
     
     try {
-      const [encryptedRoute, encryptedDates, encryptedInterests] = await Promise.all([
-        encryptRoute(trip.route),
-        encryptDates(trip.startDate, trip.endDate),
-        encryptInterests(trip.interests),
-      ]);
-
-      return {
-        encryptedRoute,
-        encryptedDates,
-        encryptedInterests,
-      };
+      const result = await computeTripMatch(
+        program,
+        program.provider as AnchorProvider,
+        tripA,
+        tripB
+      );
+      return result;
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -103,24 +127,46 @@ export function useArcium(): UseArciumReturn {
     }
   };
 
-  const computeMatch = async (tripA: string, tripB: string): Promise<number> => {
+  const waitForMatchResult = async (computationAccount: PublicKey, timeoutMs = 60000) => {
+    if (!program) throw new Error('Wallet not connected');
     setIsLoading(true);
     setError(null);
     
     try {
-      // Trigger MPC computation via API
-      const response = await fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripAId: tripA, tripBId: tripB }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Match computation failed');
-      }
-      
-      const data = await response.json();
-      return data.result?.matchScore || 0;
+      const result = await awaitMatchResult(program, computationAccount, timeoutMs);
+      return result;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const acceptMatchOnChain = async (matchPDA: PublicKey, tripPDA: PublicKey) => {
+    if (!program) throw new Error('Wallet not connected');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const signature = await acceptMatch(program, matchPDA, tripPDA);
+      return signature;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const rejectMatchOnChain = async (matchPDA: PublicKey, tripPDA: PublicKey) => {
+    if (!program) throw new Error('Wallet not connected');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const signature = await rejectMatch(program, matchPDA, tripPDA);
+      return signature;
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -130,11 +176,15 @@ export function useArcium(): UseArciumReturn {
   };
 
   return {
-    encrypt,
-    decrypt,
-    encryptTripData,
+    initEncryption,
+    encryptTrip,
+    createTripOnChain,
     computeMatch,
+    waitForMatchResult,
+    acceptMatchOnChain,
+    rejectMatchOnChain,
     isLoading,
     error,
+    program,
   };
 }

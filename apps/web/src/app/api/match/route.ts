@@ -1,7 +1,8 @@
 // API Route: POST /api/match - Trigger MPC match computation
+// NOTE: This should ideally be called client-side with wallet connected
+// Server-side can only validate/prepare data
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArciumClient } from '@/lib/arcium/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,28 +15,26 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Trigger MPC computation via Arcium
-    const arciumClient = getArciumClient();
-    const computationId = await arciumClient.requestMatchComputation(tripAId, tripBId);
-    
-    // Poll for result (in production, use webhooks)
-    // For now, get result immediately
-    const result = await arciumClient.getMatchResult(computationId);
+    // NOTE: Actual MPC computation MUST happen client-side with wallet
+    // because it requires signing transactions
     
     return NextResponse.json({
-      success: true,
-      computationId,
-      result: {
-        matchScore: result.matchScore,
-        routeOverlap: result.routeOverlap,
-        dateOverlap: result.dateOverlap,
-        interestSimilarity: result.interestSimilarity,
+      message: 'Match computation must be triggered from client with wallet.',
+      instructions: {
+        step1: 'Retrieve encrypted trip data from local storage',
+        step2: 'Call computeTripMatch() from @/lib/arcium/compute-match',
+        step3: 'Listen for MatchComputedEvent using @/lib/arcium/events',
+        step4: 'Display match scores to user',
+      },
+      example: {
+        import: "import { computeTripMatch } from '@/lib/arcium/compute-match'",
+        usage: "const { computationOffset } = await computeTripMatch(program, provider, tripDataA, tripDataB)",
       },
     });
   } catch (error) {
-    console.error('Match computation error:', error);
+    console.error('Match validation error:', error);
     return NextResponse.json(
-      { error: 'Failed to compute match' },
+      { error: 'Failed to validate match request' },
       { status: 500 }
     );
   }
