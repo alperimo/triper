@@ -2,23 +2,24 @@
 // Powered by Arcium MXE for confidential computations
 
 use anchor_lang::prelude::*;
-use arcis::prelude::*;
+use arcium_anchor::prelude::*;
 
 // Declare modules
 pub mod instructions;
 pub mod state;
 pub mod error;
-pub mod confidential;
 
 // Re-export for convenience
 pub use instructions::*;
 pub use state::*;
 pub use error::*;
-pub use confidential::*;
 
 declare_id!("Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY");
 
-#[program]
+// Computation definition offset for compute_match encrypted instruction
+const COMP_DEF_OFFSET_COMPUTE_MATCH: u32 = comp_def_offset("compute_match");
+
+#[arcium_program]
 pub mod triper {
     use super::*;
 
@@ -30,43 +31,82 @@ pub mod triper {
         instructions::create_trip::handler(ctx, route_hash)
     }
 
-    /// Confidential trip matching computation
-    /// Runs via Arcium MXE - data never decrypted
-    #[confidential]
-    pub fn compute_match(
-        ctx: Context<ComputeMatch>,
-        // Trip A (encrypted)
-        route_a: Vec<(f64, f64)>,
-        dates_a: (i64, i64),
-        interests_a: Vec<u32>,
-        // Trip B (encrypted)
-        route_b: Vec<(f64, f64)>,
-        dates_b: (i64, i64),
-        interests_b: Vec<u32>,
-        // Config
-        grid_size: u32,
-    ) -> Result<MatchResult> {
-        // This entire computation runs via MPC!
-        let result = confidential::compute_trip_match(
-            route_a,
-            dates_a,
-            interests_a,
-            route_b,
-            dates_b,
-            interests_b,
-            grid_size,
-        );
-        
-        Ok(result)
+    /// Initialize the computation definition for match computation
+    /// Must be called once after program deployment
+    pub fn init_compute_match_comp_def(
+        ctx: Context<InitComputeMatchCompDef>
+    ) -> Result<()> {
+        init_comp_def(ctx.accounts, true, 0, None, None)?;
+        Ok(())
     }
 
-    /// Record a match (called after MXE computation completes)
+    /// Queue a confidential trip matching computation
+    /// Encrypted data is sent to Arcium MPC network
+    pub fn queue_compute_match(
+        ctx: Context<QueueComputeMatch>,
+        computation_offset: u64,
+        // Encrypted ciphertexts for trip data
+        encrypted_trip_a: Vec<u8>,
+        encrypted_trip_b: Vec<u8>,
+        pub_key: [u8; 32],
+        nonce: u128,
+    ) -> Result<()> {
+        let args = vec![
+            Argument::ArcisPubkey(pub_key),
+            Argument::PlaintextU128(nonce),
+            Argument::EncryptedBytes(encrypted_trip_a),
+            Argument::EncryptedBytes(encrypted_trip_b),
+        ];
+
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+
+        queue_computation(
+            ctx.accounts,
+            computation_offset,
+            args,
+            None,
+            vec![ComputeMatchCallback::callback_ix(&[])],
+        )?;
+        Ok(())
+    }
+
+    /// Callback handler - receives encrypted match results from MPC network
+    #[arcium_callback(encrypted_ix = "compute_match")]
+    pub fn compute_match_callback(
+        ctx: Context<ComputeMatchCallback>,
+        output: ComputationOutputs<ComputeMatchOutput>,
+    ) -> Result<()> {
+        let result = match output {
+            ComputationOutputs::Success(result) => result,
+            _ => return Err(error::ErrorCode::ComputationFailed.into()),
+        };
+
+        // Emit event with encrypted scores
+        emit!(MatchComputedEvent {
+            trip_a: ctx.accounts.trip_a.key(),
+            trip_b: ctx.accounts.trip_b.key(),
+            encrypted_scores: result.field_0.ciphertexts,
+            nonce: result.field_0.nonce.to_le_bytes(),
+        });
+
+        Ok(())
+    }
+
+    /// Record a match (called after decrypting scores on client)
     pub fn record_match(
         ctx: Context<RecordMatch>,
-        match_result: MatchResult,
-        computation_id: [u8; 32],
+        route_score: u8,
+        date_score: u8,
+        interest_score: u8,
+        total_score: u8,
     ) -> Result<()> {
-        instructions::record_match::handler(ctx, match_result, computation_id)
+        instructions::record_match::handler(
+            ctx,
+            route_score,
+            date_score,
+            interest_score,
+            total_score,
+        )
     }
 
     /// Accept a match

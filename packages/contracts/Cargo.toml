@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/triper"
+    "programs/triper",
+    "encrypted-ixs"
 ]
 resolver = "2"
 

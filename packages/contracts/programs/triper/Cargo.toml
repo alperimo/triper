@@ -19,5 +19,5 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
-arcis = "0.3.0"
+arcium-anchor = "0.3.0"
 borsh = "0.10.3"
