@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::Trip;
 
 #[derive(Accounts)]
+#[instruction(route_hash: [u8; 32])]
 pub struct CreateTrip<'info> {
     #[account(
         init,

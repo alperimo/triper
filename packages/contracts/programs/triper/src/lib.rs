@@ -8,11 +8,13 @@ use arcium_anchor::prelude::*;
 pub mod instructions;
 pub mod state;
 pub mod error;
+pub mod event;
 
 // Re-export for convenience
 pub use instructions::*;
 pub use state::*;
 pub use error::*;
+pub use event::*;
 
 declare_id!("Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY");
 
@@ -50,14 +52,14 @@ pub mod triper {
         pub_key: [u8; 32],
         nonce: u128,
     ) -> Result<()> {
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+        
         let args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
             Argument::EncryptedU8(ciphertext_a),
             Argument::EncryptedU8(ciphertext_b),
         ];
-
-        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
 
         queue_computation(
             ctx.accounts,
@@ -66,6 +68,7 @@ pub mod triper {
             None,
             vec![ComputeTripMatchCallback::callback_ix(&[])],
         )?;
+        
         Ok(())
     }
 
@@ -76,7 +79,7 @@ pub mod triper {
         output: ComputationOutputs<ComputeTripMatchOutput>,
     ) -> Result<()> {
         let scores = match output {
-            ComputationOutputs::Success(scores) => scores,
+            ComputationOutputs::Success(ComputeTripMatchOutput { field_0 }) => field_0,
             _ => return Err(error::ErrorCode::ComputationFailed.into()),
         };
 
@@ -90,37 +93,5 @@ pub mod triper {
         });
 
         Ok(())
-    }
-
-    /// Record a match (called after decrypting scores on client)
-    pub fn record_match(
-        ctx: Context<RecordMatch>,
-        route_score: u8,
-        date_score: u8,
-        interest_score: u8,
-        total_score: u8,
-    ) -> Result<()> {
-        instructions::record_match::handler(
-            ctx,
-            route_score,
-            date_score,
-            interest_score,
-            total_score,
-        )
-    }
-
-    /// Accept a match
-    pub fn accept_match(ctx: Context<AcceptMatch>) -> Result<()> {
-        instructions::accept_match::handler(ctx)
-    }
-
-    /// Reject a match
-    pub fn reject_match(ctx: Context<RejectMatch>) -> Result<()> {
-        instructions::reject_match::handler(ctx)
-    }
-
-    /// Deactivate a trip
-    pub fn deactivate_trip(ctx: Context<DeactivateTrip>) -> Result<()> {
-        instructions::deactivate_trip::handler(ctx)
     }
 }
