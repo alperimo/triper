@@ -53,6 +53,12 @@ test-ledger/
 *.so
 *.dump
 
+# Arcium
+encrypted-ixs/arcis_temp_target
+build
+encrypted-ixs/src/main.rs
+artifacts/
+
 # Rust
 **/target/
 **/*.rs.bk
