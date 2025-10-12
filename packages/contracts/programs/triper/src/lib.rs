@@ -16,8 +16,8 @@ pub use error::*;
 
 declare_id!("Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY");
 
-// Computation definition offset for compute_match encrypted instruction
-const COMP_DEF_OFFSET_COMPUTE_MATCH: u32 = comp_def_offset("compute_match");
+// Computation definition offset for compute_trip_match encrypted instruction
+const COMP_DEF_OFFSET_COMPUTE_TRIP_MATCH: u32 = comp_def_offset("compute_trip_match");
 
 #[arcium_program]
 pub mod triper {
@@ -33,8 +33,8 @@ pub mod triper {
 
     /// Initialize the computation definition for match computation
     /// Must be called once after program deployment
-    pub fn init_compute_match_comp_def(
-        ctx: Context<InitComputeMatchCompDef>
+    pub fn init_compute_trip_match_comp_def(
+        ctx: Context<InitComputeTripMatchCompDef>
     ) -> Result<()> {
         init_comp_def(ctx.accounts, true, 0, None, None)?;
         Ok(())
@@ -42,20 +42,19 @@ pub mod triper {
 
     /// Queue a confidential trip matching computation
     /// Encrypted data is sent to Arcium MPC network
-    pub fn queue_compute_match(
-        ctx: Context<QueueComputeMatch>,
+    pub fn compute_trip_match(
+        ctx: Context<ComputeTripMatch>,
         computation_offset: u64,
-        // Encrypted ciphertexts for trip data
-        encrypted_trip_a: Vec<u8>,
-        encrypted_trip_b: Vec<u8>,
+        ciphertext_a: [u8; 32],
+        ciphertext_b: [u8; 32],
         pub_key: [u8; 32],
         nonce: u128,
     ) -> Result<()> {
         let args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
-            Argument::EncryptedBytes(encrypted_trip_a),
-            Argument::EncryptedBytes(encrypted_trip_b),
+            Argument::EncryptedU8(ciphertext_a),
+            Argument::EncryptedU8(ciphertext_b),
         ];
 
         ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
@@ -65,28 +64,29 @@ pub mod triper {
             computation_offset,
             args,
             None,
-            vec![ComputeMatchCallback::callback_ix(&[])],
+            vec![ComputeTripMatchCallback::callback_ix(&[])],
         )?;
         Ok(())
     }
 
-    /// Callback handler - receives encrypted match results from MPC network
-    #[arcium_callback(encrypted_ix = "compute_match")]
-    pub fn compute_match_callback(
-        ctx: Context<ComputeMatchCallback>,
-        output: ComputationOutputs<ComputeMatchOutput>,
+    /// Callback handler - receives match results from MPC network
+    #[arcium_callback(encrypted_ix = "compute_trip_match")]
+    pub fn compute_trip_match_callback(
+        ctx: Context<ComputeTripMatchCallback>,
+        output: ComputationOutputs<ComputeTripMatchOutput>,
     ) -> Result<()> {
-        let result = match output {
-            ComputationOutputs::Success(result) => result,
+        let scores = match output {
+            ComputationOutputs::Success(scores) => scores,
             _ => return Err(error::ErrorCode::ComputationFailed.into()),
         };
 
-        // Emit event with encrypted scores
+        // Emit event with match scores
         emit!(MatchComputedEvent {
-            trip_a: ctx.accounts.trip_a.key(),
-            trip_b: ctx.accounts.trip_b.key(),
-            encrypted_scores: result.field_0.ciphertexts,
-            nonce: result.field_0.nonce.to_le_bytes(),
+            computation_account: ctx.accounts.computation_account.key(),
+            route_score: scores.field_0,
+            date_score: scores.field_1,
+            interest_score: scores.field_2,
+            total_score: scores.field_3,
         });
 
         Ok(())
