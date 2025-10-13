@@ -7,38 +7,31 @@
 
 import { x25519, RescueCipher, getMXEPublicKey } from '@arcium-hq/client';
 import { AnchorProvider, web3 } from '@coral-xyz/anchor';
-import { latLngToCell, routeToCells } from '@/lib/geo/grid';
-import type { GridCell } from '@/types';
+import { waypointsToH3Cells, h3ToU64, computeDestinationHash } from '@/lib/geo/h3';
+import type { H3Index, Waypoint, InterestTag } from '@/types';
 
 // Constants from Rust circuit
 const MAX_WAYPOINTS = 20;
 const MAX_INTERESTS = 32;
 
 /**
- * Grid cell matching Rust circuit structure
- * Uses integer coordinates for MPC compatibility
- */
-interface MpcGridCell {
-  x: number; // i32 in Rust
-  y: number; // i32 in Rust
-}
-
-/**
  * TripData structure EXACTLY matching Rust circuit in encrypted-ixs/src/trip_matching.rs
  * 
  * pub struct TripData {
- *     grid_cells: [GridCell; MAX_WAYPOINTS],
- *     cell_count: u8,
- *     start_date: i64,
- *     end_date: i64,
- *     interests: [bool; 32],
+ *     waypoints: [u64; 20],      // H3 cells at resolution 7
+ *     waypoint_count: u8,
+ *     start_date: i64,           // Unix timestamp
+ *     end_date: i64,             // Unix timestamp  
+ *     interests: [bool; 32],     // Boolean flags
  * }
+ * 
+ * Total size: 20*8 + 1 + 8 + 8 + 32 = 209 bytes
  */
 export interface TripData {
-  gridCells: MpcGridCell[];  // Will be padded to MAX_WAYPOINTS
+  waypoints: Waypoint[];    // Will be converted to H3 cells and padded to 20
   startDate: Date;
   endDate: Date;
-  interests: string[];       // Will be converted to bool[32]
+  interests: InterestTag[]; // Will be converted to bool[32]
 }
 
 /**
@@ -87,8 +80,8 @@ export async function initializeEncryption(
  * 
  * Rust structure:
  * pub struct TripData {
- *     grid_cells: [GridCell; 20],
- *     cell_count: u8,
+ *     waypoints: [u64; 20],      // H3 cells
+ *     waypoint_count: u8,
  *     start_date: i64,
  *     end_date: i64,
  *     interests: [bool; 32],
@@ -97,15 +90,21 @@ export async function initializeEncryption(
 export function serializeTripData(data: TripData): bigint[] {
   const serialized: bigint[] = [];
   
-  // 1. Grid cells (20 cells, each with x and y coordinates)
-  const paddedCells = padGridCells(data.gridCells);
-  for (const cell of paddedCells) {
-    serialized.push(BigInt(cell.x));
-    serialized.push(BigInt(cell.y));
+  // 1. Convert waypoints to H3 cells
+  const h3Cells = waypointsToH3Cells(data.waypoints);
+  const actualWaypointCount = h3Cells.length;
+  
+  // Convert H3 cells to u64 and pad to MAX_WAYPOINTS
+  for (let i = 0; i < MAX_WAYPOINTS; i++) {
+    if (i < h3Cells.length) {
+      serialized.push(h3ToU64(h3Cells[i]));
+    } else {
+      serialized.push(BigInt(0)); // Padding
+    }
   }
   
-  // 2. Cell count (u8)
-  serialized.push(BigInt(Math.min(data.gridCells.length, MAX_WAYPOINTS)));
+  // 2. Waypoint count (u8)
+  serialized.push(BigInt(actualWaypointCount));
   
   // 3. Start date (i64 - Unix timestamp in seconds)
   serialized.push(BigInt(Math.floor(data.startDate.getTime() / 1000)));
@@ -113,7 +112,7 @@ export function serializeTripData(data: TripData): bigint[] {
   // 4. End date (i64 - Unix timestamp in seconds)
   serialized.push(BigInt(Math.floor(data.endDate.getTime() / 1000)));
   
-  // 5. Interests (32 booleans as bits)
+  // 5. Interests (32 booleans)
   const interestBools = convertInterestsToBoolArray(data.interests);
   for (const flag of interestBools) {
     serialized.push(flag ? BigInt(1) : BigInt(0));
@@ -123,83 +122,15 @@ export function serializeTripData(data: TripData): bigint[] {
 }
 
 /**
- * Pad grid cells to MAX_WAYPOINTS with zeros
+ * Convert InterestTag enum array to boolean[32]
+ * Maps interest tags to their fixed positions (0-31)
  */
-function padGridCells(cells: MpcGridCell[]): MpcGridCell[] {
-  const padded: MpcGridCell[] = [];
-  
-  // Add actual cells (up to MAX_WAYPOINTS)
-  for (let i = 0; i < MAX_WAYPOINTS; i++) {
-    if (i < cells.length) {
-      padded.push(cells[i]);
-    } else {
-      padded.push({ x: 0, y: 0 }); // Padding
-    }
-  }
-  
-  return padded;
-}
-
-/**
- * Convert lat/lng coordinates to integer grid cells for MPC
- * Scales coordinates to integer grid (e.g., 0.001 degree precision = ~111 meters)
- */
-export function convertRouteToGridCells(route: Array<{ lat: number; lng: number }>): MpcGridCell[] {
-  return route.map(point => ({
-    // Scale to integer grid with ~100m precision
-    // Multiply by 1000 to preserve 3 decimal places
-    x: Math.floor(point.lat * 1000),
-    y: Math.floor(point.lng * 1000),
-  }));
-}
-
-/**
- * Convert interest strings to boolean array[32]
- * Maps known interests to fixed positions
- */
-function convertInterestsToBoolArray(interests: string[]): boolean[] {
+function convertInterestsToBoolArray(interests: InterestTag[]): boolean[] {
   const bools = new Array(MAX_INTERESTS).fill(false);
   
-  // Interest category mapping (must match Rust circuit expectations)
-  const interestMap: Record<string, number> = {
-    adventure: 0,
-    culture: 1,
-    food: 2,
-    nature: 3,
-    nightlife: 4,
-    relaxation: 5,
-    shopping: 6,
-    sports: 7,
-    beach: 8,
-    mountains: 9,
-    cities: 10,
-    rural: 11,
-    photography: 12,
-    wellness: 13,
-    history: 14,
-    art: 15,
-    music: 16,
-    festivals: 17,
-    wildlife: 18,
-    diving: 19,
-    skiing: 20,
-    hiking: 21,
-    biking: 22,
-    camping: 23,
-    luxury: 24,
-    budget: 25,
-    family: 26,
-    solo: 27,
-    couples: 28,
-    groups: 29,
-    backpacking: 30,
-    roadtrip: 31,
-  };
-  
   for (const interest of interests) {
-    const pos = interestMap[interest.toLowerCase()];
-    if (pos !== undefined && pos < MAX_INTERESTS) {
-      bools[pos] = true;
+    if (interest >= 0 && interest < MAX_INTERESTS) {
+      bools[interest] = true;
     }
   }
   
@@ -243,20 +174,10 @@ export function encryptTripData(
 }
 
 /**
- * Compute SHA-256 hash of route for on-chain storage
- * This is NOT encrypted, just a commitment to the route
- * Returns 32-byte array for Solana program
+ * Compute destination grid hash for pre-filtering
+ * Uses H3 level 6 (~36 km²) for coarse-grained location matching
+ * This is public (not encrypted) for efficient filtering
  */
-export async function hashRouteForChain(
-  route: Array<{ lat: number; lng: number }>
-): Promise<Uint8Array> {
-  const gridCells = convertRouteToGridCells(route);
-  const cellData = gridCells.map(c => `${c.x},${c.y}`).join('|');
-  
-  const encoder = new TextEncoder();
-  const data = encoder.encode(cellData);
-  
-  // Use Web Crypto API for SHA-256  
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as BufferSource);
-  return new Uint8Array(hashBuffer);
+export function computePublicDestinationHash(destination: Waypoint): string {
+  return computeDestinationHash(destination);
 }

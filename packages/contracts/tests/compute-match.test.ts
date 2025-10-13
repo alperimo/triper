@@ -94,17 +94,83 @@ describe("Arcium Trip Matching", () => {
     const sharedSecret = x25519.getSharedSecret(privateKey, mxePublicKey);
     const cipher = new RescueCipher(sharedSecret);
 
-    // Create mock trip data for testing
-    // In production, this would be actual TripData structs
-    // For now, we'll encrypt simple values that the circuit can process
+    // Create realistic TripData matching the circuit structure
+    // TripData in encrypted-ixs/src/trip_matching.rs:
+    // pub struct TripData {
+    //     waypoints: [u64; 20],     // H3 cells at resolution 7
+    //     waypoint_count: u8,
+    //     start_date: i64,          // Unix timestamp
+    //     end_date: i64,
+    //     interests: [bool; 32],
+    // }
+    
+    // Sample H3 cells at resolution 7 (San Francisco to LA route)
+    const tripAWaypoints = [
+      BigInt("0x872830828ffffff"), // SF
+      BigInt("0x872830829ffffff"), // San Jose
+      BigInt("0x87283082affffff"), // Monterey
+      BigInt("0x87283082bffffff"), // Big Sur
+      BigInt("0x8728343c8ffffff"), // Santa Barbara
+      BigInt("0x8728343c9ffffff"), // LA
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), // Padded to 20
+    ];
+    
+    const tripBWaypoints = [
+      BigInt("0x872830828ffffff"), // SF (same as A)
+      BigInt("0x872830829ffffff"), // San Jose (same as A)
+      BigInt("0x87283082cffffff"), // Different route
+      BigInt("0x87283082dffffff"),
+      BigInt("0x8728343c8ffffff"), // Santa Barbara (same as A)
+      BigInt("0x8728343c9ffffff"), // LA (same as A)
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0),
+    ];
+    
+    // Dates: June 1-15, 2025
+    const startDate = BigInt(Math.floor(new Date("2025-06-01").getTime() / 1000));
+    const endDate = BigInt(Math.floor(new Date("2025-06-15").getTime() / 1000));
+    
+    // Interests: hiking (0), photography (1), food (2) = true, rest false
+    const interestsA = [
+      BigInt(1), BigInt(1), BigInt(1), // hiking, photography, food
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+    ];
+    
+    const interestsB = [
+      BigInt(1), BigInt(1), BigInt(0), // hiking, photography (overlap), no food
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
+    ];
+    
+    // Serialize TripData according to circuit structure
     const tripAData = [
-      BigInt(1), // Mock grid cell data
-      BigInt(2),
+      ...tripAWaypoints,      // 20 waypoints (u64)
+      BigInt(6),              // waypoint_count (u8) - 6 actual waypoints
+      startDate,              // start_date (i64)
+      endDate,                // end_date (i64)
+      ...interestsA,          // 32 interests (bool)
     ];
     
     const tripBData = [
-      BigInt(1), // Mock grid cell data (same as A for testing)
-      BigInt(2),
+      ...tripBWaypoints,
+      BigInt(6),
+      startDate,
+      endDate,
+      ...interestsB,
     ];
 
     // Encrypt the trip data
@@ -181,6 +247,15 @@ describe("Arcium Trip Matching", () => {
     expect(matchEvent.dateScore).to.be.at.least(0).and.at.most(100);
     expect(matchEvent.interestScore).to.be.at.least(0).and.at.most(100);
     expect(matchEvent.totalScore).to.be.at.least(0).and.at.most(100);
+
+    // Verify expected scores based on test data:
+    // - Route overlap: 4/8 cells match (SF, San Jose, Santa Barbara, LA) = ~50%
+    // - Date overlap: 100% (same dates)
+    // - Interest overlap: 2/3 match (hiking, photography) = ~67%
+    console.log("\n📊 Expected vs Actual:");
+    console.log("   Route: ~50% (4 overlapping waypoints)");
+    console.log("   Date: 100% (same dates)");
+    console.log("   Interest: ~67% (2/3 match)");
 
     console.log("\n✨ MPC computation completed successfully!");
     console.log("   The encrypted trip data was processed without revealing sensitive information!");

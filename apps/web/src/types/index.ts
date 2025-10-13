@@ -1,26 +1,83 @@
 // Core type definitions for Triper
 
-export interface GridCell {
-  lat: number;  // Grid cell center latitude
-  lng: number;  // Grid cell center longitude
-  cellId: string; // Unique identifier (e.g., "52.5_13.4")
+/**
+ * H3 cell representation
+ * H3 cells are stored as strings (hex format) or bigint (numeric format)
+ */
+export type H3Index = string; // e.g., "872830828ffffff"
+
+/**
+ * Waypoint with lat/lng coordinates
+ * Converted to H3 cells for privacy-preserving storage
+ */
+export interface Waypoint {
+  lat: number;
+  lng: number;
+  name?: string; // Optional place name
+}
+
+/**
+ * Interest tags (0-31)
+ * Maps to bool[32] array in MPC circuit
+ */
+export enum InterestTag {
+  HIKING = 0,
+  PHOTOGRAPHY = 1,
+  FOOD = 2,
+  CULTURE = 3,
+  BEACH = 4,
+  NIGHTLIFE = 5,
+  ADVENTURE = 6,
+  RELAXATION = 7,
+  SHOPPING = 8,
+  WILDLIFE = 9,
+  HISTORY = 10,
+  ART = 11,
+  MUSIC = 12,
+  SPORTS = 13,
+  SKIING = 14,
+  DIVING = 15,
+  SURFING = 16,
+  CLIMBING = 17,
+  CYCLING = 18,
+  RUNNING = 19,
+  YOGA = 20,
+  MEDITATION = 21,
+  COOKING = 22,
+  WINE = 23,
+  COFFEE = 24,
+  LOCAL = 25,
+  LUXURY = 26,
+  BUDGET = 27,
+  ECO = 28,
+  FAMILY = 29,
+  SOLO = 30,
+  COUPLE = 31,
 }
 
 export interface Trip {
   id: string;
   owner: string; // Wallet public key
-  gridCells: GridCell[]; // Route represented as grid cells
+  
+  // Route data (up to 20 waypoints)
+  waypoints: Waypoint[];
+  destination: Waypoint; // Final destination
+  
+  // Date range
   startDate: Date;
   endDate: Date;
-  interests: string[]; // e.g., ["hiking", "photography", "food"]
+  
+  // Interest tags
+  interests: InterestTag[];
+  
+  // Metadata
   travelStyle: TravelStyle;
   isActive: boolean;
   createdAt: Date;
   
-  // Encrypted data (stored on-chain)
-  encryptedGridCells?: Uint8Array;
-  encryptedDates?: Uint8Array;
-  encryptedInterests?: Uint8Array;
+  // On-chain data (encrypted)
+  encryptedData?: Uint8Array; // Full TripData encrypted (209 bytes)
+  destinationGridHash: string; // H3 cell at resolution 6 (for pre-filtering)
 }
 
 export type TravelStyle = 
