@@ -19,4 +19,23 @@ pub enum ErrorCode {
     
     #[msg("Cluster not set")]
     ClusterNotSet,
+    
+    #[msg("Encrypted data exceeds 2048 bytes")]
+    EncryptedDataTooLarge,
+    
+    #[msg("End date must be after start date")]
+    InvalidDateRange,
+    
+    #[msg("Cannot match trip with itself")]
+    SameTripMatch,
+    
+    #[msg("Match quota exceeded")]
+    QuotaExceeded,
+    
+    #[msg("Insufficient funds for match computation")]
+    InsufficientFunds,
+    
+    #[msg("Invalid score value (must be 0-100)")]
+    InvalidScore,
 }
+

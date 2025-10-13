@@ -86,6 +86,10 @@ pub struct ComputeTripMatch<'info> {
     pub clock_account: Account<'info, ClockAccount>,
     pub system_program: Program<'info, System>,
     pub arcium_program: Program<'info, Arcium>,
+    
+    /// Match record to be updated in callback
+    #[account(mut)]
+    pub match_record: Account<'info, crate::state::MatchRecord>,
 }
 
 /// Callback after computation completes
@@ -103,4 +107,8 @@ pub struct ComputeTripMatchCallback<'info> {
     #[account(mut)]
     /// CHECK: computation_account for emitting events
     pub computation_account: UncheckedAccount<'info>,
+    
+    /// Match record to update with scores (passed via remaining accounts)
+    #[account(mut)]
+    pub match_record: Account<'info, crate::state::MatchRecord>,
 }

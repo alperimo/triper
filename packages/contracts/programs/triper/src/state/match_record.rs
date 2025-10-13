@@ -62,7 +62,8 @@ impl MatchRecord {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub enum MatchStatus {
-    Pending,
-    Mutual,
-    Rejected,
+    Pending,      // Computation requested, waiting for MPC result
+    Completed,    // MPC computation finished, scores available
+    Mutual,       // Both users accepted the match
+    Rejected,     // One or both users rejected
 }

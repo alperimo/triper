@@ -8,13 +8,13 @@ use arcium_anchor::prelude::*;
 pub mod instructions;
 pub mod state;
 pub mod error;
-pub mod event;
+pub mod events;
 
 // Re-export for convenience
 pub use instructions::*;
 pub use state::*;
 pub use error::*;
-pub use event::*;
+pub use events::*;
 
 declare_id!("Fn6rAGhjUc45tQqfgsXCdNtNC3GSfNWdjHEjpHaUJMaY");
 
@@ -30,12 +30,29 @@ pub mod triper {
         instructions::accept_match_handler(ctx)
     }
 
-    /// Create a new trip (public metadata only)
+    /// Create a new trip with encrypted data
     pub fn create_trip(
         ctx: Context<CreateTrip>,
-        route_hash: [u8; 32]
+        destination_grid_hash: [u8; 32],
+        start_date: i64,
+        end_date: i64,
+        encrypted_data: Vec<u8>,
+        public_key: [u8; 32],
     ) -> Result<()> {
-        instructions::create_trip_handler(ctx, route_hash)
+        instructions::create_trip_handler(
+            ctx,
+            destination_grid_hash,
+            start_date,
+            end_date,
+            encrypted_data,
+            public_key,
+        )
+    }
+
+    /// Initiate a match computation between two trips
+    /// Creates MatchRecord in Pending status
+    pub fn initiate_match(ctx: Context<InitiateMatch>) -> Result<()> {
+        instructions::initiate_match_handler(ctx)
     }
 
     /// Initialize the computation definition for match computation
@@ -74,10 +91,13 @@ pub mod triper {
             vec![ComputeTripMatchCallback::callback_ix(&[])],
         )?;
         
+        msg!("Queued MPC computation for match record: {}", ctx.accounts.match_record.key());
+        
         Ok(())
     }
 
     /// Callback handler - receives match results from MPC network
+    /// Updates MatchRecord with computed scores
     #[arcium_callback(encrypted_ix = "compute_trip_match")]
     pub fn compute_trip_match_callback(
         ctx: Context<ComputeTripMatchCallback>,
@@ -88,7 +108,16 @@ pub mod triper {
             _ => return Err(error::ErrorCode::ComputationFailed.into()),
         };
 
-        // Emit event with match scores
+        let match_record = &mut ctx.accounts.match_record;
+        
+        // Update MatchRecord with MPC computation results
+        match_record.route_score = scores.field_0;
+        match_record.date_score = scores.field_1;
+        match_record.interest_score = scores.field_2;
+        match_record.total_score = scores.field_3;
+        match_record.status = state::MatchStatus::Completed;
+        
+        // Emit event for frontend notification
         emit!(MatchComputedEvent {
             computation_account: ctx.accounts.computation_account.key(),
             route_score: scores.field_0,
@@ -96,6 +125,13 @@ pub mod triper {
             interest_score: scores.field_2,
             total_score: scores.field_3,
         });
+        
+        msg!("Match computation completed via Arcium MPC");
+        msg!("Match record {} updated with scores:", match_record.key());
+        msg!("  Route: {}/100", scores.field_0);
+        msg!("  Dates: {}/100", scores.field_1);
+        msg!("  Interests: {}/100", scores.field_2);
+        msg!("  Total: {}/100", scores.field_3);
 
         Ok(())
     }
@@ -103,23 +139,6 @@ pub mod triper {
     /// Deactivate a trip
     pub fn deactivate_trip(ctx: Context<DeactivateTrip>) -> Result<()> {
         instructions::deactivate_trip_handler(ctx)
-    }
-
-    /// Record a match (called after decrypting scores on client)
-    pub fn record_match(
-        ctx: Context<RecordMatch>,
-        route_score: u8,
-        date_score: u8,
-        interest_score: u8,
-        total_score: u8,
-    ) -> Result<()> {
-        instructions::record_match_handler(
-            ctx,
-            route_score,
-            date_score,
-            interest_score,
-            total_score,
-        )
     }
 
     /// Reject a match

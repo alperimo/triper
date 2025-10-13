@@ -43,8 +43,8 @@ pub fn record_match_handler(
     match_account.status = MatchStatus::Pending;
     
     // Increment computation counters
-    ctx.accounts.trip_a.computation_count += 1;
-    ctx.accounts.trip_b.computation_count += 1;
+    ctx.accounts.trip_a.match_count += 1;
+    ctx.accounts.trip_b.match_count += 1;
     
     msg!("Match computation completed via Arcium MXE");
     msg!("Trip A: {} <-> Trip B: {}", match_account.trip_a, match_account.trip_b);
