@@ -129,6 +129,13 @@ export type Triper = {
         {
           "name": "arciumProgram",
           "address": "BKck65TgoKRokMjQM3datB9oRwJ8rAj2jxPXvHXUvcL6"
+        },
+        {
+          "name": "matchRecord",
+          "docs": [
+            "Match record to be updated in callback"
+          ],
+          "writable": true
         }
       ],
       "args": [
@@ -172,7 +179,8 @@ export type Triper = {
     {
       "name": "computeTripMatchCallback",
       "docs": [
-        "Callback handler - receives match results from MPC network"
+        "Callback handler - receives match results from MPC network",
+        "Updates MatchRecord with computed scores"
       ],
       "discriminator": [
         54,
@@ -198,6 +206,13 @@ export type Triper = {
         },
         {
           "name": "computationAccount",
+          "writable": true
+        },
+        {
+          "name": "matchRecord",
+          "docs": [
+            "Match record to update with scores (passed via remaining accounts)"
+          ],
           "writable": true
         }
       ],
@@ -225,7 +240,7 @@ export type Triper = {
     {
       "name": "createTrip",
       "docs": [
-        "Create a new trip (public metadata only)"
+        "Create a new trip with encrypted data"
       ],
       "discriminator": [
         52,
@@ -258,7 +273,7 @@ export type Triper = {
               },
               {
                 "kind": "arg",
-                "path": "routeHash"
+                "path": "startDate"
               }
             ]
           }
@@ -275,7 +290,28 @@ export type Triper = {
       ],
       "args": [
         {
-          "name": "routeHash",
+          "name": "destinationGridHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "startDate",
+          "type": "i64"
+        },
+        {
+          "name": "endDate",
+          "type": "i64"
+        },
+        {
+          "name": "encryptedData",
+          "type": "bytes"
+        },
+        {
+          "name": "publicKey",
           "type": {
             "array": [
               "u8",
@@ -354,23 +390,46 @@ export type Triper = {
       "args": []
     },
     {
-      "name": "recordMatch",
+      "name": "initiateMatch",
       "docs": [
-        "Record a match (called after decrypting scores on client)"
+        "Initiate a match computation between two trips",
+        "Creates MatchRecord in Pending status"
       ],
       "discriminator": [
-        148,
-        41,
-        163,
-        203,
-        58,
-        251,
-        192,
-        228
+        32,
+        85,
+        207,
+        130,
+        197,
+        172,
+        21,
+        2
       ],
       "accounts": [
         {
-          "name": "matchAccount",
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tripA",
+          "docs": [
+            "First trip (requester's trip)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "tripB",
+          "docs": [
+            "Second trip (potential match)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "matchRecord",
+          "docs": [
+            "Match record PDA: [b\"match\", trip_a, trip_b]"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -396,37 +455,11 @@ export type Triper = {
           }
         },
         {
-          "name": "tripA",
-          "writable": true
-        },
-        {
-          "name": "tripB",
-          "writable": true
-        },
-        {
-          "name": "authority",
-          "writable": true,
-          "signer": true
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "routeScore",
-          "type": "u8"
-        },
-        {
-          "name": "dateScore",
-          "type": "u8"
-        },
-        {
-          "name": "interestScore",
-          "type": "u8"
-        },
-        {
-          "name": "totalScore",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "rejectMatch",
@@ -570,6 +603,32 @@ export type Triper = {
   ],
   "events": [
     {
+      "name": "matchComputationCompleted",
+      "discriminator": [
+        144,
+        2,
+        83,
+        195,
+        43,
+        41,
+        170,
+        35
+      ]
+    },
+    {
+      "name": "matchComputationRequested",
+      "discriminator": [
+        12,
+        1,
+        109,
+        38,
+        116,
+        241,
+        49,
+        206
+      ]
+    },
+    {
       "name": "matchComputedEvent",
       "discriminator": [
         219,
@@ -580,6 +639,19 @@ export type Triper = {
         2,
         23,
         185
+      ]
+    },
+    {
+      "name": "tripCreated",
+      "discriminator": [
+        66,
+        48,
+        64,
+        12,
+        89,
+        157,
+        28,
+        249
       ]
     }
   ],
@@ -613,6 +685,36 @@ export type Triper = {
       "code": 6005,
       "name": "clusterNotSet",
       "msg": "Cluster not set"
+    },
+    {
+      "code": 6006,
+      "name": "encryptedDataTooLarge",
+      "msg": "Encrypted data exceeds 2048 bytes"
+    },
+    {
+      "code": 6007,
+      "name": "invalidDateRange",
+      "msg": "End date must be after start date"
+    },
+    {
+      "code": 6008,
+      "name": "sameTripMatch",
+      "msg": "Cannot match trip with itself"
+    },
+    {
+      "code": 6009,
+      "name": "quotaExceeded",
+      "msg": "Match quota exceeded"
+    },
+    {
+      "code": 6010,
+      "name": "insufficientFunds",
+      "msg": "Insufficient funds for match computation"
+    },
+    {
+      "code": 6011,
+      "name": "invalidScore",
+      "msg": "Invalid score value (must be 0-100)"
     }
   ],
   "types": [
@@ -1055,7 +1157,174 @@ export type Triper = {
       }
     },
     {
+      "name": "matchComputationCompleted",
+      "docs": [
+        "Emitted when MPC computation completes and scores are stored"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "matchRecord",
+            "docs": [
+              "Match record PDA"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tripA",
+            "docs": [
+              "First trip"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tripB",
+            "docs": [
+              "Second trip"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "routeScore",
+            "docs": [
+              "Route similarity score (0-100)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "dateScore",
+            "docs": [
+              "Date overlap score (0-100)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "interestScore",
+            "docs": [
+              "Interest similarity score (0-100)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "totalScore",
+            "docs": [
+              "Total match score (0-100)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "computationId",
+            "docs": [
+              "Arcium computation ID"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "Completion timestamp"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "matchComputationRequested",
+      "docs": [
+        "Emitted when a match computation is requested",
+        "Off-chain MPC service listens for this event"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "matchRecord",
+            "docs": [
+              "Match record PDA"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tripA",
+            "docs": [
+              "First trip"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tripB",
+            "docs": [
+              "Second trip"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "encryptedDataA",
+            "docs": [
+              "Encrypted trip data A (ciphertext)"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "encryptedDataB",
+            "docs": [
+              "Encrypted trip data B (ciphertext)"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "publicKeyA",
+            "docs": [
+              "Public key for trip A (x25519)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "publicKeyB",
+            "docs": [
+              "Public key for trip B (x25519)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "requester",
+            "docs": [
+              "User who requested the match"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "Request timestamp"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "matchComputedEvent",
+      "docs": [
+        "Legacy event for MPC callback (from compute_trip_match callback)"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -1194,6 +1463,9 @@ export type Triper = {
         "variants": [
           {
             "name": "pending"
+          },
+          {
+            "name": "completed"
           },
           {
             "name": "mutual"
@@ -1385,8 +1657,10 @@ export type Triper = {
     {
       "name": "trip",
       "docs": [
-        "Public trip metadata - NO SENSITIVE DATA",
-        "Sensitive data (route, dates, interests) is encrypted and processed via Arcium MXE"
+        "Trip account with destination-based matching",
+        "Two-stage architecture:",
+        "1. Pre-filtering: Uses destination_grid_hash + dates (public, coarse)",
+        "2. MPC Computation: Uses encrypted_data (precise waypoints)"
       ],
       "type": {
         "kind": "struct",
@@ -1399,9 +1673,10 @@ export type Triper = {
             "type": "pubkey"
           },
           {
-            "name": "routeHash",
+            "name": "destinationGridHash",
             "docs": [
-              "Hash of the route for verification (non-sensitive)"
+              "Destination grid hash for pre-filtering (coarse, H3 level 6 = ~36km²)",
+              "Example: SHA256(\"Tokyo_Shibuya_area\")"
             ],
             "type": {
               "array": [
@@ -1411,11 +1686,36 @@ export type Triper = {
             }
           },
           {
-            "name": "createdAt",
+            "name": "startDate",
             "docs": [
-              "Creation timestamp"
+              "Trip date range (public for pre-filtering)"
             ],
             "type": "i64"
+          },
+          {
+            "name": "endDate",
+            "type": "i64"
+          },
+          {
+            "name": "encryptedData",
+            "docs": [
+              "Encrypted trip data for MPC computation",
+              "Contains: precise waypoints[], interests[], preferences",
+              "Format: x25519 + RescueCipher encrypted TripData struct"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "publicKey",
+            "docs": [
+              "Public key for MPC (x25519)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
             "name": "isActive",
@@ -1425,12 +1725,18 @@ export type Triper = {
             "type": "bool"
           },
           {
-            "name": "computationCount",
+            "name": "matchCount",
             "docs": [
-              "Number of match computations performed",
-              "Used to track Arcium MXE usage"
+              "Number of match computations performed"
             ],
             "type": "u32"
+          },
+          {
+            "name": "createdAt",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
           },
           {
             "name": "bump",
@@ -1438,6 +1744,64 @@ export type Triper = {
               "Bump seed for PDA derivation"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tripCreated",
+      "docs": [
+        "Emitted when a trip is created"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trip",
+            "docs": [
+              "Trip PDA"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "Trip owner"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationGridHash",
+            "docs": [
+              "Destination grid hash (for pre-filtering)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "startDate",
+            "docs": [
+              "Trip start date"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "endDate",
+            "docs": [
+              "Trip end date"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
           }
         ]
       }

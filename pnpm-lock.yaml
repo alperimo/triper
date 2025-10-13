@@ -81,8 +81,8 @@ importers:
         specifier: ^7.64.0
         version: 7.65.0(react@19.1.0)
       react-map-gl:
-        specifier: ^8.1.0
-        version: 8.1.0(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0)
+        specifier: ^7.1.7
+        version: 7.1.7(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
@@ -97,7 +97,7 @@ importers:
         specifier: ^4
         version: 4.1.14
       '@types/maplibre-gl':
-        specifier: ^1.13.2
+        specifier: ^1.14.0
         version: 1.14.0
       '@types/node':
         specifier: ^20
@@ -4058,6 +4058,12 @@ packages:
       '@types/istanbul-lib-report': 3.0.3
     dev: false
 
+  /@types/mapbox-gl@3.4.1:
+    resolution: {integrity: sha512-NsGKKtgW93B+UaLPti6B7NwlxYlES5DpV5Gzj9F75rK5ALKsqSk15CiEHbOnTr09RGbr6ZYiCdI+59NNNcAImg==}
+    dependencies:
+      '@types/geojson': 7946.0.16
+    dev: false
+
   /@types/maplibre-gl@1.14.0:
     resolution: {integrity: sha512-I6ibscT7UdL1oOqqCz9s1gjcolLaUPkHIIfMLusczTvlsMhjORyS6sE1g4V/NESAOL5KhNQX3/31LJH+OCGjkg==}
     deprecated: This is a stub types definition. maplibre-gl provides its own type definitions, so you do not need this installed.
@@ -4132,36 +4138,6 @@ packages:
     resolution: {integrity: sha512-WpxBCKWPLr4xSsHgz511rFJAM+wS28w2zEO1QDNY5zM/S8ok70NNfztH0xwhqKyaK0OHCbN98LDAZuy1ctxDkA==}
     dependencies:
       '@types/yargs-parser': 21.0.3
-    dev: false
-
-  /@vis.gl/react-mapbox@8.1.0(react-dom@19.1.0)(react@19.1.0):
-    resolution: {integrity: sha512-FwvH822oxEjWYOr+pP2L8hpv+7cZB2UsQbHHHT0ryrkvvqzmTgt7qHDhamv0EobKw86e1I+B4ojENdJ5G5BkyQ==}
-    peerDependencies:
-      mapbox-gl: '>=3.5.0'
-      react: '>=16.3.0'
-      react-dom: '>=16.3.0'
-    peerDependenciesMeta:
-      mapbox-gl:
-        optional: true
-    dependencies:
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
-    dev: false
-
-  /@vis.gl/react-maplibre@8.1.0(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0):
-    resolution: {integrity: sha512-PkAK/gp3mUfhCLhUuc+4gc3PN9zCtVGxTF2hB6R5R5yYUw+hdg84OZ770U5MU4tPMTCG6fbduExuIW6RRKN6qQ==}
-    peerDependencies:
-      maplibre-gl: '>=4.0.0'
-      react: '>=16.3.0'
-      react-dom: '>=16.3.0'
-    peerDependenciesMeta:
-      maplibre-gl:
-        optional: true
-    dependencies:
-      '@maplibre/maplibre-gl-style-spec': 19.3.3
-      maplibre-gl: 5.9.0
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
     dev: false
 
   /@wallet-standard/app@1.1.0:
@@ -8357,8 +8333,8 @@ packages:
     resolution: {integrity: sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==}
     dev: false
 
-  /react-map-gl@8.1.0(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0):
-    resolution: {integrity: sha512-vDx/QXR3Tb+8/ap/z6gdMjJQ8ZEyaZf6+uMSPz7jhWF5VZeIsKsGfPvwHVPPwGF43Ryn+YR4bd09uEFNR5OPdg==}
+  /react-map-gl@7.1.7(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0):
+    resolution: {integrity: sha512-mwjc0obkBJOXCcoXQr3VoLqmqwo9vS4bXfbGsdxXzEgVCv/PM0v+1QggL7W0d/ccIy+VCjbXNlGij+PENz6VNg==}
     peerDependencies:
       mapbox-gl: '>=1.13.0'
       maplibre-gl: '>=1.13.0'
@@ -8370,8 +8346,8 @@ packages:
       maplibre-gl:
         optional: true
     dependencies:
-      '@vis.gl/react-mapbox': 8.1.0(react-dom@19.1.0)(react@19.1.0)
-      '@vis.gl/react-maplibre': 8.1.0(maplibre-gl@5.9.0)(react-dom@19.1.0)(react@19.1.0)
+      '@maplibre/maplibre-gl-style-spec': 19.3.3
+      '@types/mapbox-gl': 3.4.1
       maplibre-gl: 5.9.0
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)

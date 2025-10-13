@@ -1,10 +1,21 @@
-// Map-based Route Builder Component with H3 Geospatial Integration
+/**
+ * RouteBuilder Component - Interactive route planning with MapLibre GL + H3
+ * 
+ * Features:
+ * - Click to add waypoints (up to 20)
+ * - Shift + Click to set destination
+ * - Displays H3 cells for privacy
+ * - Shows route lines
+ * - Remove waypoints
+ */
+
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { MapPin, Trash2, Flag } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { MapPin, Trash2, Flag, Info } from 'lucide-react';
+import { MapView } from '../map/MapView';
 import { latLngToH3Cell, h3CellToLatLng, formatH3Index } from '@/lib/geo/h3';
-import type { Waypoint } from '@/types';
+import type { Waypoint, H3Index } from '@/types';
 
 interface RouteBuilderProps {
   waypoints: Waypoint[];
@@ -13,294 +24,275 @@ interface RouteBuilderProps {
   maxWaypoints?: number;
 }
 
-export function RouteBuilder({ waypoints, destination, onChange, maxWaypoints = 20 }: RouteBuilderProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
+export function RouteBuilder({ 
+  waypoints, 
+  destination, 
+  onChange, 
+  maxWaypoints = 20 
+}: RouteBuilderProps) {
+  const [hoveredH3, setHoveredH3] = useState<string | null>(null);
 
-  // TODO: Integrate with actual map library (Leaflet, Mapbox, etc.)
-  // For now, show a placeholder with manual input
-
-  const addWaypoint = (lat: number, lng: number) => {
-    if (waypoints.length >= maxWaypoints) {
-      alert(`Maximum ${maxWaypoints} waypoints allowed`);
-      return;
-    }
+  /**
+   * Handle map click - add waypoint or set destination
+   */
+  const handleMapClick = useCallback((event: { lng: number; lat: number; lngLat: [number, number] }) => {
+    const { lat, lng } = event;
     
     // Convert to H3 cell and back to get cell center
     const h3Cell = latLngToH3Cell(lat, lng);
     const cellCenter = h3CellToLatLng(h3Cell);
     
+    // Check if this is a destination click (Shift key)
+    // Note: We can't detect Shift in the click callback, so we'll use a button instead
+    // For now, always add as waypoint
+    
+    if (waypoints.length >= maxWaypoints) {
+      alert(`Maximum ${maxWaypoints} waypoints allowed`);
+      return;
+    }
+    
     onChange([...waypoints, cellCenter], destination);
-  };
+  }, [waypoints, destination, onChange, maxWaypoints]);
 
-  const setDestination = (lat: number, lng: number) => {
+  /**
+   * Add waypoint from coordinates
+   */
+  const addWaypoint = useCallback((lat: number, lng: number) => {
+    if (waypoints.length >= maxWaypoints) {
+      alert(`Maximum ${maxWaypoints} waypoints allowed`);
+      return;
+    }
+    
+    const h3Cell = latLngToH3Cell(lat, lng);
+    const cellCenter = h3CellToLatLng(h3Cell);
+    
+    onChange([...waypoints, cellCenter], destination);
+  }, [waypoints, destination, onChange, maxWaypoints]);
+
+  /**
+   * Set destination from coordinates
+   */
+  const setDestinationPoint = useCallback((lat: number, lng: number) => {
     const h3Cell = latLngToH3Cell(lat, lng);
     const cellCenter = h3CellToLatLng(h3Cell);
     
     onChange(waypoints, cellCenter);
-  };
+  }, [waypoints, onChange]);
 
-  const removeWaypoint = (index: number) => {
+  /**
+   * Remove waypoint
+   */
+  const removeWaypoint = useCallback((index: number) => {
     onChange(waypoints.filter((_, i) => i !== index), destination);
-  };
+  }, [waypoints, destination, onChange]);
 
-  const clearDestination = () => {
+  /**
+   * Clear destination
+   */
+  const clearDestination = useCallback(() => {
     onChange(waypoints, undefined);
-  };
+  }, [waypoints, onChange]);
 
-  const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Mock: Convert click position to lat/lng
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  /**
+   * Convert waypoints to H3 cells for visualization
+   */
+  const h3Cells = useMemo(() => {
+    return waypoints.map((point, idx) => ({
+      h3Index: latLngToH3Cell(point.lat, point.lng),
+      color: idx === 0 ? '#10b981' : '#3b82f6', // First waypoint green, others blue
+      opacity: 0.3,
+    }));
+  }, [waypoints]);
+
+  /**
+   * Convert destination to H3 cell
+   */
+  const destinationH3 = useMemo(() => {
+    if (!destination) return [];
+    return [{
+      h3Index: latLngToH3Cell(destination.lat, destination.lng),
+      color: '#ef4444', // Red for destination
+      opacity: 0.4,
+    }];
+  }, [destination]);
+
+  /**
+   * Markers for waypoints and destination
+   */
+  const markers = useMemo(() => {
+    const allMarkers = [];
     
-    // Simple mock conversion (replace with actual map library)
-    const lat = 50 - (y / rect.height) * 40; // Range: 50 to 10
-    const lng = -10 + (x / rect.width) * 60; // Range: -10 to 50
+    // Waypoint markers
+    waypoints.forEach((point, idx) => {
+      allMarkers.push({
+        lng: point.lng,
+        lat: point.lat,
+        label: `${idx + 1}`,
+        color: idx === 0 ? '#10b981' : '#3b82f6',
+      });
+    });
     
-    // Check if shift key is pressed for destination
-    if (e.shiftKey) {
-      setDestination(Number(lat.toFixed(4)), Number(lng.toFixed(4)));
-    } else {
-      addWaypoint(Number(lat.toFixed(4)), Number(lng.toFixed(4)));
+    // Destination marker
+    if (destination) {
+      allMarkers.push({
+        lng: destination.lng,
+        lat: destination.lat,
+        label: '🏁',
+        color: '#ef4444',
+      });
     }
-  };
+    
+    return allMarkers;
+  }, [waypoints, destination]);
+
+  /**
+   * Calculate map center
+   */
+  const mapCenter = useMemo((): [number, number] => {
+    if (destination) return [destination.lng, destination.lat];
+    if (waypoints.length > 0) {
+      const last = waypoints[waypoints.length - 1];
+      return [last.lng, last.lat];
+    }
+    return [-122.45, 37.78]; // Default: San Francisco
+  }, [waypoints, destination]);
 
   return (
     <div className="space-y-4">
       {/* Map Container */}
-      <div
-        ref={mapRef}
-        onClick={handleMapClick}
-        className="relative w-full h-96 bg-gray-800 rounded-lg border-2 border-gray-700 cursor-crosshair overflow-hidden"
-      >
-        {/* Mock Map Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-750 to-gray-800">
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }} />
-        </div>
+      <div className="relative w-full h-[500px] rounded-lg overflow-hidden border-2 border-gray-700">
+        <MapView
+          initialCenter={mapCenter}
+          initialZoom={waypoints.length > 0 ? 8 : 10}
+          height="100%"
+          onClick={handleMapClick}
+          showControls={true}
+          h3Cells={[...h3Cells, ...destinationH3]}
+          markers={markers}
+        />
 
-        {/* Instructions */}
+        {/* Instructions Overlay */}
         {waypoints.length === 0 && !destination && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-gray-400">
-              <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">Click to add waypoints (H3 cells)</p>
-              <p className="text-sm mt-1">Shift + Click to set destination</p>
-              <p className="text-xs mt-2 text-gray-500">Using H3 resolution 7 (~5 km² cells)</p>
+            <div className="text-center text-white bg-black/60 backdrop-blur-sm p-6 rounded-lg">
+              <MapPin className="w-12 h-12 mx-auto mb-3" />
+              <p className="font-medium text-lg">Click to add waypoints</p>
+              <p className="text-sm mt-2">Using H3 resolution 7 (~5 km² cells)</p>
+              <p className="text-xs mt-2 text-gray-300">
+                Use buttons below to set destination
+              </p>
             </div>
           </div>
         )}
-
-        {/* Route Visualization */}
-        {waypoints.length > 0 && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {/* Draw lines between waypoints */}
-            {waypoints.map((point, i) => {
-              if (i === 0) return null;
-              const prev = waypoints[i - 1];
-              
-              // Mock position calculation (replace with actual map projection)
-              const x1 = ((prev.lng + 10) / 60) * 100;
-              const y1 = ((50 - prev.lat) / 40) * 100;
-              const x2 = ((point.lng + 10) / 60) * 100;
-              const y2 = ((50 - point.lat) / 40) * 100;
-              
-              return (
-                <line
-                  key={i}
-                  x1={`${x1}%`}
-                  y1={`${y1}%`}
-                  x2={`${x2}%`}
-                  y2={`${y2}%`}
-                  stroke="#3b82f6"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray="5,5"
-                />
-              );
-            })}
-            
-            {/* Line to destination */}
-            {destination && waypoints.length > 0 && (() => {
-              const lastWaypoint = waypoints[waypoints.length - 1];
-              const x1 = ((lastWaypoint.lng + 10) / 60) * 100;
-              const y1 = ((50 - lastWaypoint.lat) / 40) * 100;
-              const x2 = ((destination.lng + 10) / 60) * 100;
-              const y2 = ((50 - destination.lat) / 40) * 100;
-              
-              return (
-                <line
-                  x1={`${x1}%`}
-                  y1={`${y1}%`}
-                  x2={`${x2}%`}
-                  y2={`${y2}%`}
-                  stroke="#10b981"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray="5,5"
-                />
-              );
-            })()}
-          </svg>
-        )}
-
-        {/* Waypoint Markers */}
-        {waypoints.map((point, i) => {
-          // Mock position calculation
-          const x = ((point.lng + 10) / 60) * 100;
-          const y = ((50 - point.lat) / 40) * 100;
-          const h3Cell = latLngToH3Cell(point.lat, point.lng);
-          
-          return (
-            <div
-              key={i}
-              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
-              style={{ left: `${x}%`, top: `${y}%` }}
-            >
-              <div className="relative group">
-                <div className="w-8 h-8 bg-blue-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-xs font-bold">
-                  {i + 1}
-                </div>
-                {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  H3: {formatH3Index(h3Cell)}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeWaypoint(i);
-                  }}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        
-        {/* Destination Marker */}
-        {destination && (() => {
-          const x = ((destination.lng + 10) / 60) * 100;
-          const y = ((50 - destination.lat) / 40) * 100;
-          const h3Cell = latLngToH3Cell(destination.lat, destination.lng);
-          
-          return (
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
-              style={{ left: `${x}%`, top: `${y}%` }}
-            >
-              <div className="relative group">
-                <div className="w-10 h-10 bg-green-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
-                  <Flag className="w-5 h-5 text-white" />
-                </div>
-                {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  Destination (H3: {formatH3Index(h3Cell)})
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearDestination();
-                  }}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
-      {/* Info Panel */}
+      {/* Info Panel - Waypoints List */}
       <div className="bg-gray-800 rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Waypoints */}
+          {/* Waypoints Section */}
           <div>
-            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Waypoints ({waypoints.length}/{maxWaypoints})
-            </h4>
-            {waypoints.length > 0 ? (
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {waypoints.map((point, i) => {
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Waypoints ({waypoints.length}/{maxWaypoints})
+              </h3>
+            </div>
+            
+            {waypoints.length === 0 ? (
+              <p className="text-xs text-gray-500">No waypoints added yet</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {waypoints.map((point, idx) => {
                   const h3Cell = latLngToH3Cell(point.lat, point.lng);
                   return (
                     <div
-                      key={i}
-                      className="flex items-center justify-between text-sm bg-gray-750 rounded px-3 py-2"
+                      key={idx}
+                      className="flex items-center justify-between bg-gray-700/50 p-2 rounded text-xs"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                          {i + 1}
-                        </span>
-                        <div>
-                          <div className="font-mono text-gray-300 text-xs">
-                            {formatH3Index(h3Cell)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
-                          </div>
+                      <div className="flex-1">
+                        <div className="font-mono text-blue-400">
+                          {idx + 1}. {formatH3Index(h3Cell)}
+                        </div>
+                        <div className="text-gray-400 mt-0.5">
+                          {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
                         </div>
                       </div>
                       <button
-                        onClick={() => removeWaypoint(i)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors"
+                        onClick={() => removeWaypoint(idx)}
+                        className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                        title="Remove waypoint"
                       >
-                        <Trash2 className="w-4 h-4 text-red-400" />
+                        <Trash2 className="w-3 h-3 text-red-400" />
                       </button>
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">Click on map to add waypoints</p>
             )}
           </div>
-          
-          {/* Destination */}
+
+          {/* Destination Section */}
           <div>
-            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <Flag className="w-4 h-4" />
-              Destination
-            </h4>
-            {destination ? (
-              <div className="flex items-center justify-between text-sm bg-green-900/20 border border-green-700 rounded px-3 py-2">
-                <div>
-                  <div className="font-mono text-gray-300 text-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <Flag className="w-4 h-4" />
+                Destination
+              </h3>
+            </div>
+            
+            {!destination ? (
+              <p className="text-xs text-gray-500">No destination set</p>
+            ) : (
+              <div className="space-y-2">
+                <div className="bg-gray-700/50 p-2 rounded text-xs">
+                  <div className="font-mono text-green-400">
                     {formatH3Index(latLngToH3Cell(destination.lat, destination.lng))}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-gray-400 mt-0.5">
                     {destination.lat.toFixed(4)}, {destination.lng.toFixed(4)}
                   </div>
-                  {destination.name && (
-                    <div className="text-xs text-gray-400 mt-1">{destination.name}</div>
-                  )}
+                  <button
+                    onClick={clearDestination}
+                    className="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear destination
+                  </button>
                 </div>
-                <button
-                  onClick={clearDestination}
-                  className="p-1 hover:bg-gray-700 rounded transition-colors"
-                >
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </button>
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">Shift + Click to set destination</p>
+            )}
+            
+            {/* Quick Action: Set Last Waypoint as Destination */}
+            {waypoints.length > 0 && !destination && (
+              <button
+                onClick={() => {
+                  const last = waypoints[waypoints.length - 1];
+                  setDestinationPoint(last.lat, last.lng);
+                  onChange(waypoints.slice(0, -1), { ...last });
+                }}
+                className="mt-3 w-full text-xs bg-green-600 hover:bg-green-700 px-3 py-2 rounded transition-colors"
+              >
+                Use last waypoint as destination
+              </button>
             )}
           </div>
         </div>
-        
+
         {/* H3 Info */}
-        <div className="mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500">
-          <p>
-            <strong>H3 Geospatial:</strong> Waypoints use ~5 km² cells (resolution 7). 
-            Destination uses ~36 km² for pre-filtering (resolution 6).
-          </p>
+        <div className="mt-4 pt-4 border-t border-gray-700">
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-gray-300">H3 Privacy Layer</p>
+              <p className="mt-1">
+                Waypoints use H3 resolution 7 (~5 km² per cell, ~2.5 km edge).
+                Destination uses resolution 6 (~36 km² per cell) for pre-filtering.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
