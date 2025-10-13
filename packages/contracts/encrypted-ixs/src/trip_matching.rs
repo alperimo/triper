@@ -19,62 +19,79 @@ mod circuits {
     // Maximum waypoints per route (fixed size for MPC compatibility)
     const MAX_WAYPOINTS: usize = 20;
     
-    /// Grid cell for privacy-preserving location matching
-    /// Uses integer coordinates for MPC compatibility
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    struct GridCell {
-        x: i32,
-        y: i32,
-    }
+    // Maximum interest tags
+    const MAX_INTERESTS: usize = 32;
     
-    /// Trip data with integer-based coordinates
-    /// Coordinates are pre-scaled and grid-aligned by the client
+    /// Trip data structure matching what's encrypted in Trip.encrypted_data
+    /// This is what the client encrypts and stores on-chain
     pub struct TripData {
-        // Grid cells (pre-computed by client for MPC efficiency)
-        // Each cell represents a grid-quantized location
-        grid_cells: [GridCell; MAX_WAYPOINTS],
-        cell_count: u8,
+        // H3 cells at level 7 (~5km² resolution)
+        // Each waypoint is represented as a u64 H3 index
+        waypoints: [u64; MAX_WAYPOINTS],
+        waypoint_count: u8,
         
-        // Trip timing
-        start_date: i64,  // Unix timestamp
-        end_date: i64,    // Unix timestamp
+        // Trip timing (Unix timestamps)
+        start_date: i64,
+        end_date: i64,
         
-        // Interests as boolean flags (up to 32 categories)
-        interests: [bool; 32],
+        // Interest tags as boolean flags (up to 32 categories)
+        // interests[0] = hiking, interests[1] = food, etc.
+        interests: [bool; MAX_INTERESTS],
     }
     
-    /// Compute route similarity using grid-based Jaccard index
+    /// Compute route similarity using H3 cell Jaccard index
     /// Returns percentage similarity (0-100)
-    fn compute_route_similarity(cells_a: &[GridCell; MAX_WAYPOINTS], count_a: u8,
-                                cells_b: &[GridCell; MAX_WAYPOINTS], count_b: u8) -> u8 {
-        // Count overlapping cells (Jaccard similarity)
-        let mut overlap_count = 0u32;
+    /// 
+    /// Algorithm: Jaccard = |A ∩ B| / |A ∪ B|
+    /// - Count matching H3 cells between routes
+    /// - Divide by total unique cells
+    fn compute_route_similarity(
+        waypoints_a: &[u64; MAX_WAYPOINTS], 
+        count_a: u8,
+        waypoints_b: &[u64; MAX_WAYPOINTS], 
+        count_b: u8
+    ) -> u8 {
+        // Handle empty routes (can't use return in MPC)
+        let has_waypoints = count_a > 0 && count_b > 0;
+        
+        // Count overlapping H3 cells (Jaccard similarity)
+        let mut intersection_count = 0u32;
         let mut visited = [false; MAX_WAYPOINTS];
         
         // Must use constant loop bounds in MPC
         for i in 0..MAX_WAYPOINTS {
             let is_valid_b = (i as u8) < count_b;
             if is_valid_b {
+                let cell_b = waypoints_b[i];
+                
                 for j in 0..MAX_WAYPOINTS {
                     let is_valid_a = (j as u8) < count_a;
-                    let matches = is_valid_a && !visited[j] && cells_a[j] == cells_b[i];
+                    let matches = is_valid_a && !visited[j] && waypoints_a[j] == cell_b;
+                    
                     if matches {
-                        overlap_count += 1;
+                        intersection_count += 1;
                         visited[j] = true;
+                        // In MPC we can't break, so we continue but skip further checks
                     }
                 }
             }
         }
         
-        let total_cells = (count_a as u32) + (count_b as u32);
-        let unique_cells = if total_cells > overlap_count {
-            total_cells - overlap_count
-        } else {
-            1 // Avoid division by zero
-        };
+        // Jaccard = |A ∩ B| / |A ∪ B|
+        // |A ∪ B| = |A| + |B| - |A ∩ B|
+        let union_count = (count_a as u32) + (count_b as u32) - intersection_count;
+        let union_nonzero = if union_count == 0 { 1 } else { union_count };
         
-        // Return Jaccard index as percentage
-        ((overlap_count * 100) / (overlap_count + unique_cells)) as u8
+        // Return Jaccard index as percentage (0-100)
+        let jaccard_percentage = (intersection_count * 100) / union_nonzero;
+        let clamped = if jaccard_percentage > 100 { 100 } else { jaccard_percentage };
+        
+        // If no waypoints, return 0, otherwise return calculated score
+        if has_waypoints {
+            clamped as u8
+        } else {
+            0
+        }
     }
     
     /// Compute date overlap as percentage
@@ -139,7 +156,7 @@ mod circuits {
     /// This runs on Arcium's MPC network - data never decrypted
     ///
     /// Takes two encrypted trip datasets and computes compatibility scores:
-    /// - Route similarity (grid-based Jaccard for privacy)
+    /// - Route similarity (H3 cell Jaccard for privacy)
     /// - Date overlap
     /// - Interest alignment
     ///
@@ -154,10 +171,10 @@ mod circuits {
         
         // All computations happen in MPC - fully encrypted!
         let route_score = compute_route_similarity(
-            &trip_a.grid_cells,
-            trip_a.cell_count,
-            &trip_b.grid_cells,
-            trip_b.cell_count
+            &trip_a.waypoints,
+            trip_a.waypoint_count,
+            &trip_b.waypoints,
+            trip_b.waypoint_count
         );
         
         let date_score = compute_date_overlap(
@@ -189,3 +206,4 @@ mod circuits {
         )
     }
 }
+
