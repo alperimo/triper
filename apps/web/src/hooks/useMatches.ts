@@ -13,6 +13,7 @@ import type { TripData } from '@/lib/arcium/encryption';
 import type { Match, Trip } from '@/types';
 import IDL from '@/lib/anchor/triper.json';
 import type { Triper } from '@/lib/anchor/types';
+import { showError, showLoading, updateToast, showMatchFound, showWalletRequired, showSuccess } from '@/lib/toast';
 
 // TODO: Move to env config
 const PROGRAM_ID = new PublicKey(IDL.address);
@@ -44,6 +45,7 @@ export function useMatches() {
   const fetchMatches = useCallback(async () => {
     if (!wallet) {
       console.warn('Wallet not connected, cannot fetch matches');
+      showWalletRequired();
       return;
     }
     
@@ -85,7 +87,9 @@ export function useMatches() {
       setMatches(formattedMatches);
     } catch (err) {
       console.error('Failed to fetch matches:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      showError('Failed to load matches');
     } finally {
       setLocalLoading(false);
       setStoreLoading(false);
@@ -105,9 +109,11 @@ export function useMatches() {
     maxCandidates: number = 10
   ): Promise<void> => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
     
+    const toastId = showLoading('Finding matches...');
     setLocalLoading(true);
     setStoreLoading(true);
     setError(null);
@@ -135,6 +141,7 @@ export function useMatches() {
       console.log(`✅ Found ${candidates.length} pre-filtered candidates`);
       
       if (candidates.length === 0) {
+        updateToast(toastId, 'error', 'No matches found');
         console.log('No candidates found');
         return;
       }
@@ -173,9 +180,14 @@ export function useMatches() {
       // Refresh matches after computations
       await fetchMatches();
       
+      updateToast(toastId, 'success', `Found ${candidates.length} matches!`);
+      showMatchFound(candidates.length);
+      
     } catch (err) {
       console.error('Failed to find matches:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      updateToast(toastId, 'error', `Failed to find matches: ${error.message}`);
       throw err;
     } finally {
       setLocalLoading(false);
@@ -188,8 +200,11 @@ export function useMatches() {
    */
   const acceptMatch = useCallback(async (matchId: string) => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
+    
+    const toastId = showLoading('Accepting match...');
     
     try {
       const provider = new AnchorProvider(connection, wallet, {});
@@ -208,12 +223,15 @@ export function useMatches() {
         .rpc();
       
       console.log('✅ Match accepted:', matchId);
+      updateToast(toastId, 'success', 'Match accepted!');
       
       // Refresh matches
       await fetchMatches();
     } catch (err) {
       console.error('Failed to accept match:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      updateToast(toastId, 'error', `Failed to accept match: ${error.message}`);
       throw err;
     }
   }, [wallet, connection, fetchMatches]);
@@ -223,6 +241,7 @@ export function useMatches() {
    */
   const rejectMatch = useCallback(async (matchId: string) => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
     
@@ -239,9 +258,13 @@ export function useMatches() {
       // Remove from local state
       const updatedMatches = matches.filter(m => m.id !== matchId);
       setMatches(updatedMatches);
+      
+      showSuccess('Match rejected');
     } catch (err) {
       console.error('Failed to reject match:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      showError(`Failed to reject match: ${error.message}`);
       throw err;
     }
   }, [wallet, connection, matches, setMatches]);

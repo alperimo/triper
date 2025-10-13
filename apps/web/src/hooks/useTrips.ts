@@ -7,6 +7,7 @@ import { createTrip as createTripOnChain } from '@/lib/solana/create-trip';
 import type { Trip, Waypoint, InterestTag } from '@/types';
 import IDL from '@/lib/anchor/triper.json';
 import type { Triper } from '@/lib/anchor/types';
+import { showError, showLoading, updateToast, showTripCreated, showWalletRequired } from '@/lib/toast';
 
 // TODO: Move to env config
 const PROGRAM_ID = new PublicKey(IDL.address);
@@ -22,6 +23,7 @@ export function useTrips() {
   const fetchTrips = useCallback(async () => {
     if (!wallet) {
       console.warn('Wallet not connected, cannot fetch trips');
+      showWalletRequired();
       return;
     }
     
@@ -64,7 +66,9 @@ export function useTrips() {
       setMyTrips(formattedTrips);
     } catch (err) {
       console.error('Failed to fetch trips:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      showError('Failed to load trips');
     } finally {
       setLoading(false);
     }
@@ -79,9 +83,11 @@ export function useTrips() {
     travelStyle: Trip['travelStyle'] = 'adventure'
   ) => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
     
+    const toastId = showLoading('Creating trip...');
     setLoading(true);
     setError(null);
     
@@ -118,10 +124,14 @@ export function useTrips() {
       };
       
       addTrip(newTrip);
+      updateToast(toastId, 'success', 'Trip created successfully!');
+      showTripCreated(newTrip.id);
       return newTrip;
     } catch (err) {
       console.error('Failed to create trip:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      updateToast(toastId, 'error', `Failed to create trip: ${error.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -130,9 +140,11 @@ export function useTrips() {
 
   const updateTripData = useCallback(async (tripId: string, isActive: boolean) => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
     
+    const toastId = showLoading('Updating trip...');
     setLoading(true);
     setError(null);
     
@@ -152,10 +164,13 @@ export function useTrips() {
         .rpc();
       
       updateTrip(tripId, { isActive });
+      updateToast(toastId, 'success', 'Trip updated successfully!');
       console.log('✅ Trip updated:', tripId);
     } catch (err) {
       console.error('Failed to update trip:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      updateToast(toastId, 'error', `Failed to update trip: ${error.message}`);
       throw err;
     } finally {
       setLoading(false);
@@ -164,9 +179,11 @@ export function useTrips() {
 
   const deleteTrip = useCallback(async (tripId: string) => {
     if (!wallet) {
+      showWalletRequired();
       throw new Error('Wallet not connected');
     }
     
+    const toastId = showLoading('Deleting trip...');
     setLoading(true);
     setError(null);
     
@@ -175,10 +192,13 @@ export function useTrips() {
       // We just mark as inactive
       await updateTripData(tripId, false);
       removeTrip(tripId);
+      updateToast(toastId, 'success', 'Trip deleted successfully!');
       console.log('✅ Trip deactivated:', tripId);
     } catch (err) {
       console.error('Failed to delete trip:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      updateToast(toastId, 'error', `Failed to delete trip: ${error.message}`);
       throw err;
     } finally {
       setLoading(false);

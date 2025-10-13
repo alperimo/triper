@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { WalletContextProvider } from "@/components/wallet/WalletContextProvider";
-import { ToastProvider } from "@/components/shared/Toast";
+import { Toaster } from "@/lib/toast";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,9 +22,8 @@ export default function RootLayout({
       <body className={`${inter.className} bg-gray-950 text-white antialiased`}>
         <ErrorBoundary>
           <WalletContextProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            {children}
+            <Toaster />
           </WalletContextProvider>
         </ErrorBoundary>
       </body>
