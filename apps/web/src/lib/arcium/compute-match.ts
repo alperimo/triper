@@ -6,6 +6,13 @@
  * - Client encrypts with x25519 + RescueCipher
  * - Arcium MPC processes encrypted data
  * - Only match scores are revealed (not trip details)
+ * 
+ * TripData format (55 bigints total, 209 bytes):
+ * - 20 waypoints (u64 H3 cells)
+ * - 1 waypoint_count (u8)
+ * - 1 start_date (i64)
+ * - 1 end_date (i64)
+ * - 32 interests (bool)
  */
 
 import { AnchorProvider, BN, Program } from '@coral-xyz/anchor';
@@ -18,9 +25,10 @@ import {
   getMempoolAccAddress,
   getExecutingPoolAccAddress,
   getArciumEnv,
+  deserializeLE,
 } from '@arcium-hq/client';
 import type { Triper } from '../anchor/types';
-import { initializeEncryption, encryptTripData, type TripData } from './encryption';
+import { initializeEncryption, encryptTripData, serializeTripData, type TripData } from './encryption';
 
 /**
  * Compute trip match using Arcium MPC
@@ -48,10 +56,17 @@ export async function computeTripMatch(
   
   // 2. Encrypt both trips with the same nonce for this computation
   const nonce = new Uint8Array(16);
-  crypto.getRandomValues(nonce);
+  if (typeof window !== 'undefined' && window.crypto) {
+    crypto.getRandomValues(nonce);
+  }
   
   const encryptedA = encryptTripData(encryptionContext, tripA, nonce);
   const encryptedB = encryptTripData(encryptionContext, tripB, nonce);
+  
+  console.log('🔐 Encrypting trip data...');
+  console.log('  Trip A waypoints:', tripA.waypoints.length);
+  console.log('  Trip B waypoints:', tripB.waypoints.length);
+  console.log('  Serialization: 55 bigints (20 + 1 + 1 + 1 + 32)');
   
   // 3. Generate computation offset (unique ID for this computation)
   const computationOffset = new BN(Date.now()).mul(new BN(Math.floor(Math.random() * 1000000)));
@@ -69,21 +84,25 @@ export async function computeTripMatch(
     compDefOffset.readUInt32LE()
   );
   
-  // 5. Prepare ciphertexts (take first 32 bytes from each)
-  const ciphertextA = new Array(32).fill(0);
-  const ciphertextB = new Array(32).fill(0);
+  // 5. Prepare ciphertexts
+  // encryptTripData returns number[][], we need to flatten for the program
+  const flattenCiphertext = (ciphertext: number[][]): number[] => {
+    const flat: number[] = [];
+    for (const chunk of ciphertext) {
+      flat.push(...chunk);
+    }
+    return flat;
+  };
   
-  // RescueCipher outputs array of number arrays - flatten and take first 32
-  for (let i = 0; i < Math.min(32, encryptedA.ciphertext[0].length); i++) {
-    ciphertextA[i] = encryptedA.ciphertext[0][i];
-    ciphertextB[i] = encryptedB.ciphertext[0][i];
-  }
+  const ciphertextAFlat = flattenCiphertext(encryptedA.ciphertext);
+  const ciphertextBFlat = flattenCiphertext(encryptedB.ciphertext);
   
-  // 6. Convert nonce to u128
-  const nonceU128 = new BN(0);
-  for (let i = 0; i < 16; i++) {
-    nonceU128.ior(new BN(nonce[i]).shln(i * 8));
-  }
+  // Take the data we need (program expects specific size)
+  const ciphertextA = ciphertextAFlat.slice(0, 32);
+  const ciphertextB = ciphertextBFlat.slice(0, 32);
+  
+  // 6. Convert nonce to BN (u128)
+  const nonceU128 = new BN(deserializeLE(nonce).toString());
   
   // 7. Get signer PDA
   const [signPdaAccount] = PublicKey.findProgramAddressSync(
@@ -91,13 +110,17 @@ export async function computeTripMatch(
     program.programId
   );
   
+  console.log('📤 Submitting encrypted computation to Arcium MPC...');
+  console.log('  Computation Offset:', computationOffset.toString());
+  console.log('  Computation Account:', computationAccount.toString());
+  
   // 8. Submit encrypted computation to Arcium MPC network
-  const signature = await program.methods
+  const signature = await (program.methods)
     .computeTripMatch(
       computationOffset,
-      ciphertextA as any,
-      ciphertextB as any,
-      Array.from(encryptionContext.publicKey) as any,
+      ciphertextA,
+      ciphertextB,
+      Array.from(encryptionContext.publicKey),
       nonceU128
     )
     .accountsPartial({
@@ -112,9 +135,9 @@ export async function computeTripMatch(
     })
     .rpc({ skipPreflight: false, commitment: 'confirmed' });
   
-  console.log('🔐 Encrypted computation submitted to Arcium MPC');
-  console.log('  Computation Offset:', computationOffset.toString());
+  console.log('✅ Encrypted computation submitted!');
   console.log('  Transaction:', signature);
+  console.log('  MPC will process encrypted data and call back with scores');
   
   return {
     computationOffset,

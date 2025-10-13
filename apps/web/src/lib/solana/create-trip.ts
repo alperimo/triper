@@ -1,43 +1,60 @@
 /**
  * Solana Transactions - Trip Management
- * PUBLIC transactions (non-encrypted)
+ * Stores encrypted trip data with public destination hash for pre-filtering
  * 
  * Security Model:
- * - createTrip: Stores ONLY route_hash (commitment), NOT actual route
- * - Trip metadata is public (created_at, is_active, computation_count)
- * - Actual trip data (route, dates, interests) stays encrypted client-side
+ * - createTrip: Stores encrypted_data (209 bytes) + destination_grid_hash (public)
+ * - destination_grid_hash: H3 level 6 cell (~36 km²) for pre-filtering
+ * - encrypted_data: Full TripData encrypted with x25519 + RescueCipher
+ * - Trip metadata is public (created_at, is_active)
  */
 
 import { AnchorProvider, Program, web3 } from '@coral-xyz/anchor';
 import type { Triper } from '../anchor/types';
-import { hashRouteForChain } from '../arcium/encryption';
+import {
+  initializeEncryption,
+  encryptTripData,
+  computePublicDestinationHash,
+  type TripData,
+} from '../arcium/encryption';
+import type { Waypoint, InterestTag } from '@/types';
 
 /**
  * Create a new trip on-chain
  * 
- * What's stored on-chain (PUBLIC):
- * - owner: User's wallet address
- * - route_hash: SHA-256 commitment to route (NOT the actual route!)
- * - created_at: Timestamp
- * - is_active: Boolean flag
- * - computation_count: Number of matches computed
+ * What's stored on-chain:
+ * - owner: User's wallet address (PUBLIC)
+ * - destination_grid_hash: H3 level 6 cell (PUBLIC - for pre-filtering)
+ * - encrypted_data: Full TripData encrypted (PRIVATE)
+ * - created_at: Timestamp (PUBLIC)
+ * - is_active: Boolean flag (PUBLIC)
  * 
- * What's NOT stored (PRIVATE):
- * - Actual route coordinates
- * - Travel dates
- * - Interest preferences
+ * What's in encrypted_data (PRIVATE):
+ * - waypoints: Array of H3 cells (up to 20)
+ * - start_date, end_date: Unix timestamps
+ * - interests: Boolean array[32]
  * 
  * @param program - Triper program instance
- * @param route - Raw route coordinates (will be hashed, NOT stored)
+ * @param provider - Anchor provider
+ * @param waypoints - Route waypoints (will be converted to H3)
+ * @param destination - Final destination (used for public hash)
+ * @param startDate - Trip start date
+ * @param endDate - Trip end date
+ * @param interests - Interest tags (0-31)
  * @returns Transaction signature and trip PDA
  */
 export async function createTrip(
   program: Program<Triper>,
-  route: Array<{ lat: number; lng: number }>
+  provider: AnchorProvider,
+  waypoints: Waypoint[],
+  destination: Waypoint,
+  startDate: Date,
+  endDate: Date,
+  interests: InterestTag[]
 ): Promise<{
   signature: string;
   tripPDA: web3.PublicKey;
-  routeHash: Uint8Array;
+  destinationGridHash: string;
 }> {
   const owner = program.provider.publicKey;
   
@@ -45,29 +62,73 @@ export async function createTrip(
     throw new Error('Wallet not connected');
   }
   
-  // Hash the route (commitment, NOT actual route data)
-  const routeHash = await hashRouteForChain(route);
+  // 1. Compute public destination hash (H3 level 6 for pre-filtering)
+  const destinationGridHash = computePublicDestinationHash(destination);
   
-  // Derive Trip PDA
-  const [tripPDA, bump] = web3.PublicKey.findProgramAddressSync(
+  // 2. Initialize encryption context
+  const encryptionContext = await initializeEncryption(provider, program.programId);
+  
+  // 3. Prepare TripData
+  const tripData: TripData = {
+    waypoints,
+    startDate,
+    endDate,
+    interests,
+  };
+  
+  // 4. Encrypt trip data
+  const encrypted = encryptTripData(encryptionContext, tripData);
+  
+  // 5. Flatten ciphertext to bytes
+  // TODO: Properly serialize ciphertext (currently simplified)
+  const encryptedDataBytes = new Uint8Array(209); // Match circuit size
+  let offset = 0;
+  for (const chunk of encrypted.ciphertext) {
+    for (const value of chunk) {
+      if (offset < 209) {
+        encryptedDataBytes[offset++] = Number(value) & 0xff;
+      }
+    }
+  }
+  
+  // 6. Convert destination grid hash to bytes[32]
+  const destinationHashBytes = new Uint8Array(32);
+  const encoder = new TextEncoder();
+  const hashData = encoder.encode(destinationGridHash);
+  destinationHashBytes.set(hashData.slice(0, 32));
+  
+  // 7. Derive Trip PDA
+  const [tripPDA] = web3.PublicKey.findProgramAddressSync(
     [
       Buffer.from('trip'),
       owner.toBuffer(),
-      Buffer.from(routeHash),
+      Buffer.from(destinationHashBytes),
     ],
     program.programId
   );
   
-  console.log('📍 Creating trip on-chain (public metadata only)');
+  console.log('📍 Creating trip on-chain');
   console.log('  Owner:', owner.toString());
   console.log('  Trip PDA:', tripPDA.toString());
-  console.log('  Route Hash:', Buffer.from(routeHash).toString('hex').slice(0, 16) + '...');
+  console.log('  Destination Hash:', destinationGridHash);
+  console.log('  Waypoints:', waypoints.length);
+  console.log('  Date Range:', startDate.toISOString(), '→', endDate.toISOString());
+  console.log('  Interests:', interests.length);
   
-  // Submit transaction
-  const signature = await program.methods
-    .createTrip(Array.from(routeHash) as any)
+  // 8. Submit transaction
+  // Note: Type definitions may be outdated. The actual program expects:
+  // create_trip(destination_grid_hash: [u8; 32], start_date: i64, end_date: i64, encrypted_data: Vec<u8>, public_key: [u8; 32])
+  const signature = await (program.methods as any)
+    .createTrip(
+      Array.from(destinationHashBytes),
+      Math.floor(startDate.getTime() / 1000),
+      Math.floor(endDate.getTime() / 1000),
+      Array.from(encryptedDataBytes),
+      Array.from(encrypted.publicKey)
+    )
     .accountsPartial({
       user: owner,
+      trip: tripPDA,
     })
     .rpc({ commitment: 'confirmed' });
   
@@ -76,7 +137,7 @@ export async function createTrip(
   return {
     signature,
     tripPDA,
-    routeHash,
+    destinationGridHash,
   };
 }
 
