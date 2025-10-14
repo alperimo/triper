@@ -18,14 +18,14 @@ import { latLngToH3Cell, h3CellToLatLng, formatH3Index } from '@/lib/geo/h3';
 import type { Waypoint, H3Index } from '@/types';
 
 interface RouteBuilderProps {
-  waypoints: Waypoint[];
+  waypoints?: Waypoint[];
   destination?: Waypoint;
   onChange: (waypoints: Waypoint[], destination?: Waypoint) => void;
   maxWaypoints?: number;
 }
 
 export function RouteBuilder({ 
-  waypoints, 
+  waypoints = [], 
   destination, 
   onChange, 
   maxWaypoints = 20 

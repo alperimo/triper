@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Calendar, Heart, Loader2 } from 'lucide-react';
 import { useTrips } from '@/hooks/useTrips';
-import { useArcium } from '@/hooks/useArcium';
 import { showSuccess, showError } from '@/lib/toast';
 import { RouteBuilder } from './RouteBuilder';
 import { DateRangePicker } from './DateRangePicker';
@@ -19,17 +18,19 @@ interface TripCreationModalProps {
 
 export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreationModalProps) {
   const [step, setStep] = useState<'route' | 'dates' | 'interests' | 'review'>('route');
-  const [route, setRoute] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [waypoints, setWaypoints] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [destination, setDestination] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { createTrip } = useTrips();
-  const { encryptTripData } = useArcium();
+  // TODO: Implement encryption when Arcium hook is ready
+  // const { encryptTripData } = useArcium();
 
   const handleNext = () => {
-    if (step === 'route' && route.length < 2) {
+    if (step === 'route' && waypoints.length < 2) {
       showError('Please add at least 2 waypoints to your route');
       return;
     }
@@ -63,13 +64,14 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
     setIsSubmitting(true);
 
     try {
-      // Encrypt trip data
-      const encrypted = await encryptTripData({
-        route,
-        startDate,
-        endDate,
-        interests,
-      });
+      // TODO: Encrypt trip data when Arcium hook is ready
+      // const encrypted = await encryptTripData({
+      //   waypoints,
+      //   destination,
+      //   startDate,
+      //   endDate,
+      //   interests,
+      // });
 
       // Create trip via API
       const response = await fetch('/api/trips', {
@@ -77,7 +79,8 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userPublicKey,
-          route,
+          waypoints,
+          destination,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           interests,
@@ -96,7 +99,8 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
       onClose();
 
       // Reset form
-      setRoute([]);
+      setWaypoints([]);
+      setDestination(undefined);
       setStartDate(null);
       setEndDate(null);
       setInterests([]);
@@ -186,7 +190,14 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
                       </p>
                     </div>
                   </div>
-                  <RouteBuilder route={route} onChange={setRoute} />
+                  <RouteBuilder 
+                    waypoints={waypoints} 
+                    destination={destination}
+                    onChange={(newWaypoints, newDestination) => {
+                      setWaypoints(newWaypoints);
+                      setDestination(newDestination);
+                    }} 
+                  />
                 </div>
               )}
 
@@ -235,7 +246,7 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
                   <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                     <div>
                       <p className="text-sm text-gray-400">Route</p>
-                      <p className="font-medium">{route.length} waypoints</p>
+                      <p className="font-medium">{waypoints.length} waypoints{destination ? ' + 1 destination' : ''}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Dates</p>
