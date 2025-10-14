@@ -186,15 +186,9 @@ export default function MapPage() {
             )}
           </button>
 
-          {/* Mobile Bottom Sheet - Draggable with collapsed state */}
+          {/* Mobile Bottom Sheet - Expands upward from bottom */}
           <div 
-            className={`md:hidden fixed left-0 right-0 bottom-0 z-40 transition-all duration-300 ${
-              isPanelCollapsed ? 'translate-y-0' : ''
-            }`}
-            style={{ 
-              top: isPanelCollapsed ? 'auto' : '30vh',
-              maxHeight: isPanelCollapsed ? '25vh' : '70vh'
-            }}
+            className="md:hidden fixed left-0 right-0 bottom-0 z-40 transition-all duration-300"
           >
             <RouteWaypointPanel
               waypoints={waypoints}
@@ -207,7 +201,6 @@ export default function MapPage() {
               onFocusWaypoint={handleWaypointFocus}
               onClose={() => setIsPanelCollapsed(!isPanelCollapsed)}
               onRequestAddWaypoint={handleRequestAddWaypoint}
-              className="h-full"
               isMobile={true}
               isCollapsed={isPanelCollapsed}
               onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}

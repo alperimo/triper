@@ -162,7 +162,7 @@ export function RouteWaypointPanel({
     <div 
       className={`bg-white shadow-xl ${isMobile ? 'rounded-t-2xl' : 'rounded-lg'} border border-gray-200 flex flex-col ${className}`}
       style={{ 
-        maxHeight: isMobile && !isCollapsed ? '70vh' : 'auto',
+        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : 'auto',
         touchAction: 'none' // Prevent map interaction on mobile
       }}
     >
@@ -324,8 +324,8 @@ export function RouteWaypointPanel({
         </div>
       )}
 
-      {/* Footer with Stats - Hide when collapsed on mobile */}
-      {(!isMobile || !isCollapsed) && (waypoints.length > 0 || destination) && (
+      {/* Footer with Stats - Hide on mobile, show only on desktop */}
+      {!isMobile && (waypoints.length > 0 || destination) && (
         <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <div className="text-gray-600">
