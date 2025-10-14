@@ -34,20 +34,30 @@ interface RouteWaypointPanelProps {
   waypoints: Waypoint[];
   destination?: Waypoint;
   onChange: (waypoints: Waypoint[], destination?: Waypoint) => void;
+  onSelectLocation?: (location: { lat: number; lng: number; name: string; address: string }) => void; // For pin confirmation flow
   onFocusWaypoint?: (waypoint: Waypoint) => void;
   onClose?: () => void;
   className?: string;
   maxWaypoints?: number;
+  isMobile?: boolean;
+  isCollapsed?: boolean; // For mobile collapsed state
+  onToggleCollapse?: () => void; // Toggle collapse on mobile
+  onRequestAddWaypoint?: () => void; // Callback to trigger external search/pin flow
 }
 
 export function RouteWaypointPanel({
   waypoints,
   destination,
   onChange,
+  onSelectLocation,
   onFocusWaypoint,
   onClose,
   className = '',
   maxWaypoints = 20,
+  isMobile = false,
+  isCollapsed = false,
+  onToggleCollapse,
+  onRequestAddWaypoint,
 }: RouteWaypointPanelProps) {
   const [expandedSearch, setExpandedSearch] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -55,12 +65,20 @@ export function RouteWaypointPanel({
   const addWaypoint = () => {
     if (waypoints.length >= maxWaypoints) return;
     
+    // Always use inline search within the panel
     const newId = `waypoint-${Date.now()}`;
     setExpandedSearch(newId);
-    // Don't add to waypoints yet, wait for user to search
   };
 
   const setWaypoint = (index: number, location: { lat: number; lng: number; name: string; address: string }) => {
+    // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
+    if (onSelectLocation) {
+      onSelectLocation(location);
+      setExpandedSearch(null);
+      return;
+    }
+    
+    // Fallback: directly add waypoint (for backwards compatibility)
     const newWaypoints = [...waypoints];
     newWaypoints[index] = {
       id: newWaypoints[index]?.id || `waypoint-${Date.now()}`,
@@ -71,12 +89,25 @@ export function RouteWaypointPanel({
   };
 
   const setDestinationWaypoint = (location: { lat: number; lng: number; name: string; address: string }) => {
+    // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
+    if (onSelectLocation) {
+      onSelectLocation(location);
+      setExpandedSearch(null);
+      return;
+    }
+    
+    // Fallback: directly add destination (for backwards compatibility)
     const newDestination: Waypoint = {
       id: 'destination',
       ...location,
     };
     onChange(waypoints, newDestination);
     setExpandedSearch(null);
+  };
+  
+  const addDestination = () => {
+    // Always use inline search within the panel
+    setExpandedSearch('destination');
   };
 
   const removeWaypoint = (index: number) => {
@@ -128,16 +159,33 @@ export function RouteWaypointPanel({
   }, [waypoints, destination]);
 
   return (
-    <div className={`bg-white shadow-xl rounded-lg border border-gray-200 flex flex-col ${className}`}>
+    <div 
+      className={`bg-white shadow-xl ${isMobile ? 'rounded-t-2xl' : 'rounded-lg'} border border-gray-200 flex flex-col ${className}`}
+      style={{ 
+        maxHeight: isMobile && !isCollapsed ? '70vh' : 'auto',
+        touchAction: 'none' // Prevent map interaction on mobile
+      }}
+    >
+      {/* Drag Handle for Mobile */}
+      {isMobile && (
+        <button
+          onClick={onToggleCollapse}
+          className="flex justify-center pt-3 pb-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          style={{ touchAction: 'none' }}
+        >
+          <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+        </button>
+      )}
+      
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Plan Your Route</h3>
           <p className="text-sm text-gray-500 mt-1">
             Add up to {maxWaypoints} waypoints
           </p>
         </div>
-        {onClose && (
+        {onClose && !isMobile && (
           <button
             onClick={onClose}
             className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
@@ -148,8 +196,9 @@ export function RouteWaypointPanel({
         )}
       </div>
 
-      {/* Waypoints List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      {/* Waypoints List - Hide when collapsed on mobile */}
+      {(!isMobile || !isCollapsed) && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ touchAction: 'pan-y' }}>
         {/* Waypoints */}
         {waypoints.map((waypoint, index) => (
           <div
@@ -163,13 +212,8 @@ export function RouteWaypointPanel({
             }`}
           >
             <div className="flex items-start gap-2">
-              {/* Drag Handle */}
-              <button className="flex-shrink-0 w-8 h-8 mt-2 flex items-center justify-center text-gray-400 hover:text-gray-600 cursor-move">
-                <ArrowsUpDownIcon className="w-4 h-4" />
-              </button>
-
               {/* Number Badge */}
-              <div className="flex-shrink-0 w-8 h-8 mt-2 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
                 {index + 1}
               </div>
 
@@ -187,7 +231,7 @@ export function RouteWaypointPanel({
               {/* Remove Button */}
               <button
                 onClick={() => removeWaypoint(index)}
-                className="flex-shrink-0 w-8 h-8 mt-2 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
@@ -198,8 +242,7 @@ export function RouteWaypointPanel({
         {/* Add Waypoint Search */}
         {expandedSearch && expandedSearch.startsWith('waypoint-') && waypoints.length < maxWaypoints && (
           <div className="flex items-start gap-2">
-            <div className="flex-shrink-0 w-8 h-8 mt-2"></div>
-            <div className="flex-shrink-0 w-8 h-8 mt-2 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
+            <div className="flex-shrink-0 w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
               {waypoints.length + 1}
             </div>
             <div className="flex-1">
@@ -212,7 +255,7 @@ export function RouteWaypointPanel({
             </div>
             <button
               onClick={() => setExpandedSearch(null)}
-              className="flex-shrink-0 w-8 h-8 mt-2 flex items-center justify-center text-gray-400 hover:text-gray-600"
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
@@ -239,8 +282,7 @@ export function RouteWaypointPanel({
             
             {destination ? (
               <div className="flex items-start gap-2">
-                <div className="flex-shrink-0 w-8 h-8 mt-2"></div>
-                <div className="flex-shrink-0 w-8 h-8 mt-2 bg-red-500 text-white rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center">
                   <MapPinIcon className="w-5 h-5" />
                 </div>
                 <button
@@ -254,15 +296,14 @@ export function RouteWaypointPanel({
                 </button>
                 <button
                   onClick={removeDestination}
-                  className="flex-shrink-0 w-8 h-8 mt-2 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
+                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
                 >
                   <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
             ) : expandedSearch === 'destination' ? (
               <div className="flex items-start gap-2">
-                <div className="flex-shrink-0 w-8 h-8 mt-2"></div>
-                <div className="flex-shrink-0 w-8 h-8 mt-2 bg-red-500 text-white rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center">
                   <MapPinIcon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
@@ -273,14 +314,14 @@ export function RouteWaypointPanel({
                 </div>
                 <button
                   onClick={() => setExpandedSearch(null)}
-                  className="flex-shrink-0 w-8 h-8 mt-2 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
                 >
                   <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
             ) : (
               <button
-                onClick={() => setExpandedSearch('destination')}
+                onClick={addDestination}
                 className="w-full py-3 border-2 border-dashed border-red-300 rounded-lg text-red-600 hover:border-red-400 hover:text-red-700 transition-colors flex items-center justify-center gap-2"
               >
                 <MapPinIcon className="w-5 h-5" />
@@ -289,11 +330,12 @@ export function RouteWaypointPanel({
             )}
           </>
         )}
-      </div>
+        </div>
+      )}
 
-      {/* Footer with Stats */}
-      {(waypoints.length > 0 || destination) && (
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+      {/* Footer with Stats - Hide when collapsed on mobile */}
+      {(!isMobile || !isCollapsed) && (waypoints.length > 0 || destination) && (
+        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <div className="text-gray-600">
               {waypoints.length} waypoint{waypoints.length !== 1 ? 's' : ''}

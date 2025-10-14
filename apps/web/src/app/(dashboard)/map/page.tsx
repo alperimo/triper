@@ -3,12 +3,11 @@
 import { MapView } from '@/components/map/MapView';
 import { RouteSearchBar } from '@/components/map/RouteSearchBar';
 import { RouteWaypointPanel, Waypoint } from '@/components/map/RouteWaypointPanel';
-import { LocationHUD } from '@/components/map/LocationHUD';
 import { useState, useCallback } from 'react';
 import { useTrips } from '@/hooks/useTrips';
 import { useUserStore } from '@/lib/store/user';
 import { showSuccess, showError } from '@/lib/toast';
-import { CheckIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export default function MapPage() {
   const { createTrip, loading } = useTrips();
@@ -16,26 +15,55 @@ export default function MapPage() {
   
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [destination, setDestination] = useState<Waypoint | undefined>(undefined);
-  const [selectedLocation, setSelectedLocation] = useState<{
+  
+  // Pin placement mode
+  const [pendingPin, setPendingPin] = useState<{
     name: string;
     address: string;
     lat: number;
     lng: number;
   } | null>(null);
+  
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false); // For mobile collapsed state
+  const [showSearchForWaypoint, setShowSearchForWaypoint] = useState(false);
 
   // Navigate map to a specific location
   const navigateToLocation = useCallback((lat: number, lng: number) => {
     setMapCenter([lng, lat]);
   }, []);
 
-  // Handle location selection from search
+  const handleRequestAddWaypoint = useCallback(() => {
+  }, []);
+
+  // Handle location selection from search (map search bar OR panel inline search)
   const handleSearchSelect = useCallback((location: { lat: number; lng: number; name: string; address: string }) => {
-    setSelectedLocation(location);
+    setPendingPin(location);
     navigateToLocation(location.lat, location.lng);
-    setIsPanelOpen(true); // Show panel when location is selected
+    setShowSearchForWaypoint(false); // Hide search after selection
   }, [navigateToLocation]);
+
+  // Confirm pin placement - add as waypoint
+  const handleConfirmPin = useCallback(() => {
+    if (!pendingPin) return;
+    
+    const newWaypoint: Waypoint = {
+      id: `waypoint-${Date.now()}`,
+      ...pendingPin,
+    };
+    
+    // Add to existing waypoints (not replace)
+    setWaypoints(prev => [...prev, newWaypoint]);
+    setPendingPin(null);
+    setIsPanelOpen(true); // Ensure panel is open
+  }, [pendingPin]);
+
+  // Cancel pin placement
+  const handleCancelPin = useCallback(() => {
+    setPendingPin(null);
+    setShowSearchForWaypoint(false); // Also hide search
+  }, []);
 
   // Handle waypoint focus
   const handleWaypointFocus = useCallback((waypoint: Waypoint) => {
@@ -71,57 +99,108 @@ export default function MapPage() {
       // Reset form
       setWaypoints([]);
       setDestination(undefined);
-      setSelectedLocation(null);
+      setPendingPin(null);
+      setIsPanelOpen(false);
     } catch (error) {
       console.error('Create trip error:', error);
     }
   }, [publicKey, waypoints, destination, createTrip]);
 
   const hasRoute = waypoints.length > 0 || destination;
+  const showSearchBar = !isPanelOpen && waypoints.length === 0 && !pendingPin; // Only show when panel is closed AND no waypoints
 
   return (
     <div className="relative h-full w-full">
-      {/* Location HUD - Top */}
-      {selectedLocation && (
-        <div className="absolute top-0 left-0 right-0 z-30">
-          <LocationHUD
-            location={selectedLocation}
-            onNavigate={() => navigateToLocation(selectedLocation.lat, selectedLocation.lng)}
-            onClose={() => setSelectedLocation(null)}
+      {/* Search Bar - Only show when panel is closed AND no waypoints yet */}
+      {showSearchBar && (
+        <div className="absolute top-4 left-4 right-4 z-20 md:right-auto md:w-96">
+          <RouteSearchBar
+            onSelectLocation={handleSearchSelect}
+            placeholder="Search for places..."
+            onTogglePanel={() => setIsPanelOpen(!isPanelOpen)}
+            isPanelOpen={isPanelOpen}
           />
         </div>
       )}
 
-      {/* Search Bar - Top Left */}
-      <div className="absolute top-4 left-4 z-20 w-96">
-        <RouteSearchBar
-          onSelectLocation={handleSearchSelect}
-          placeholder="Search for places..."
-          onTogglePanel={() => setIsPanelOpen(!isPanelOpen)}
-          isPanelOpen={isPanelOpen}
-        />
-      </div>
+      {/* Pin Confirmation Buttons - Show when pending pin */}
+      {pendingPin && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-white shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border border-gray-200">
+          <span className="text-sm font-medium text-gray-900 truncate max-w-xs">
+            {pendingPin.name}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleConfirmPin}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1 text-sm font-medium"
+            >
+              <CheckIcon className="w-4 h-4" />
+              OK
+            </button>
+            <button
+              onClick={handleCancelPin}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1 text-sm font-medium"
+            >
+              <XMarkIcon className="w-4 h-4" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Waypoint Panel - Left Side */}
+      {/* Waypoint Panel - Desktop: Left Side, Mobile: Bottom Sheet */}
       {isPanelOpen && (
-        <div className="absolute left-4 top-24 bottom-4 z-20 w-96">
-          <RouteWaypointPanel
-            waypoints={waypoints}
-            destination={destination}
-            onChange={(newWaypoints, newDestination) => {
-              setWaypoints(newWaypoints);
-              setDestination(newDestination);
+        <>
+          {/* Desktop Panel */}
+          <div className="hidden md:block absolute left-4 top-4 bottom-4 z-20 w-96">
+            <RouteWaypointPanel
+              waypoints={waypoints}
+              destination={destination}
+              onChange={(newWaypoints, newDestination) => {
+                setWaypoints(newWaypoints);
+                setDestination(newDestination);
+              }}
+              onSelectLocation={handleSearchSelect}
+              onFocusWaypoint={handleWaypointFocus}
+              onClose={() => setIsPanelOpen(false)}
+              onRequestAddWaypoint={handleRequestAddWaypoint}
+              className="h-full"
+            />
+          </div>
+
+          {/* Mobile Bottom Sheet - Draggable with collapsed state */}
+          <div 
+            className={`md:hidden fixed left-0 right-0 bottom-0 z-40 transition-all duration-300 ${
+              isPanelCollapsed ? 'translate-y-0' : ''
+            }`}
+            style={{ 
+              top: isPanelCollapsed ? 'auto' : '30vh',
+              maxHeight: isPanelCollapsed ? '25vh' : '70vh'
             }}
-            onFocusWaypoint={handleWaypointFocus}
-            onClose={() => setIsPanelOpen(false)}
-            className="h-full"
-          />
-        </div>
+          >
+            <RouteWaypointPanel
+              waypoints={waypoints}
+              destination={destination}
+              onChange={(newWaypoints, newDestination) => {
+                setWaypoints(newWaypoints);
+                setDestination(newDestination);
+              }}
+              onSelectLocation={handleSearchSelect}
+              onFocusWaypoint={handleWaypointFocus}
+              onClose={() => setIsPanelCollapsed(!isPanelCollapsed)}
+              onRequestAddWaypoint={handleRequestAddWaypoint}
+              className="h-full"
+              isMobile={true}
+              isCollapsed={isPanelCollapsed}
+              onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
+            />
+          </div>
+        </>
       )}
 
-      {/* Create Trip Button - Bottom Right */}
+      {/* Create Trip Button - Bottom Right (Desktop only, hidden on mobile when panel open) */}
       {hasRoute && (
-        <div className="absolute bottom-8 right-8 z-20">
+        <div className={`absolute bottom-8 right-8 z-20 ${isPanelOpen ? 'hidden md:flex' : 'flex'}`}>
           <button
             onClick={handleCreateTrip}
             disabled={loading || waypoints.length === 0 || !destination}
@@ -139,14 +218,23 @@ export default function MapPage() {
         showControls={true}
         initialCenter={mapCenter || [-122.45, 37.78]}
         initialZoom={mapCenter ? 15 : 10}
-        // Pass waypoints as markers
+        // Pass waypoints and pending pin as markers
         markers={[
+          // Pending pin (yellow/orange)
+          ...(pendingPin ? [{
+            lng: pendingPin.lng,
+            lat: pendingPin.lat,
+            label: '📍',
+            color: '#f59e0b',
+          }] : []),
+          // Waypoints (green with numbers)
           ...waypoints.map((w, i) => ({
             lng: w.lng,
             lat: w.lat,
             label: `${i + 1}`,
             color: '#6b8e23',
           })),
+          // Destination (red)
           ...(destination ? [{
             lng: destination.lng,
             lat: destination.lat,
