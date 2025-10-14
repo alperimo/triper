@@ -29,7 +29,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 z-10">
+      <header className="bg-gray-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 relative z-50">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/map" className="flex items-center gap-3 group">
