@@ -34,7 +34,7 @@ export default function MatchesPage() {
         </div>
 
         {matches.length === 0 ? (
-          <div className="bg-secondary border border-gray-200 rounded-lg text-center py-16">
+          <div className="bg-secondary rounded-lg text-center py-16">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-medium text-gray-900 mb-2">No matches yet</h3>
             <p className="text-gray-600">

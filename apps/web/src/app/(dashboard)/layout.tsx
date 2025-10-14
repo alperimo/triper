@@ -28,7 +28,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Header - Navbar with edge-to-edge content */}
-      <header className="bg-secondary-light border-b border-gray-200 px-2.5 py-3 relative z-50">
+      <header className="bg-secondary border-b border-gray-200 px-2.5 py-3 relative z-50">
         <div className="flex items-center justify-between">
           {/* Logo - Left (close to edge) */}
           <Link href="/map" className="flex items-center gap-2 group">
@@ -74,7 +74,7 @@ export default function DashboardLayout({
       </main>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden bg-secondary-light border-t border-gray-200 px-2 py-2">
+      <nav className="md:hidden bg-secondary border-t border-gray-200 px-2 py-2">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = pathname === item.href;

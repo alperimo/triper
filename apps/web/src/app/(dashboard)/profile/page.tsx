@@ -22,7 +22,7 @@ export default function ProfilePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-secondary border border-gray-200 rounded-lg p-8"
+          className="bg-secondary rounded-lg p-8"
         >
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -45,15 +45,15 @@ export default function ProfilePage() {
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white rounded-lg p-4">
               <div className="text-3xl font-bold text-gray-900 mb-1">{trips.length}</div>
               <div className="text-sm text-gray-600">Active Trips</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white rounded-lg p-4">
               <div className="text-3xl font-bold text-gray-900 mb-1">0</div>
               <div className="text-sm text-gray-600">Total Matches</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white rounded-lg p-4">
               <div className="text-3xl font-bold text-gray-900 mb-1">0</div>
               <div className="text-sm text-gray-600">Connections</div>
             </div>
@@ -68,7 +68,7 @@ export default function ProfilePage() {
         >
           <h2 className="text-xl font-bold text-gray-900 mb-4">Your Trips</h2>
           {trips.length === 0 ? (
-            <div className="bg-secondary border border-gray-200 rounded-lg p-8 text-center">
+            <div className="bg-secondary rounded-lg p-8 text-center">
               <div className="text-6xl mb-4">✈️</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No trips yet</h3>
               <p className="text-gray-600 mb-4">
@@ -121,7 +121,7 @@ export default function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-secondary border border-gray-200 rounded-lg p-6"
+          className="bg-secondary rounded-lg p-6"
         >
           <div className="flex items-start gap-3">
             <div className="text-2xl">🔐</div>
