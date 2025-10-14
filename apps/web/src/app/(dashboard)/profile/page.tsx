@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useUserStore } from '@/lib/store/user';
 import { useTripStore } from '@/lib/store/trip';
 import { motion } from 'framer-motion';
-import { TripCreationModal } from '@/components/trips/TripCreationModal';
+import Link from 'next/link';
+import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
 
 export default function ProfilePage() {
   const { publicKey, disconnect } = useUserStore();
   const { myTrips: trips } = useTripStore();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const truncateAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -74,31 +74,44 @@ export default function ProfilePage() {
               <p className="text-gray-500 mb-4">
                 Create your first trip to start matching with travelers
               </p>
-              <button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+              <Link 
+                href="/map"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg transition-colors"
               >
-                Create Trip
-              </button>
+                <MapIcon className="w-5 h-5" />
+                <span>Plan Your Route</span>
+              </Link>
             </div>
           ) : (
-            <div className="grid gap-4">
-              {trips.map((trip, index) => (
-                <motion.div
-                  key={trip.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                  className="bg-gray-900/50 border border-white/10 rounded-lg p-6"
-                >
-                  <h3 className="text-lg font-semibold text-white mb-2">Trip #{trip.id.slice(0, 8)}</h3>
-                  <div className="space-y-2 text-sm text-gray-400">
-                    <div>📅 {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}</div>
-                    <div>🎒 {trip.travelStyle}</div>
-                    <div>🔒 Route encrypted</div>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="space-y-4">
+              {/* Add Trip Button */}
+              <Link 
+                href="/map"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/50 rounded-lg transition-colors"
+              >
+                <PlusIcon className="w-5 h-5" />
+                <span>Create New Trip</span>
+              </Link>
+              
+              {/* Trips List */}
+              <div className="grid gap-4">
+                {trips.map((trip, index) => (
+                  <motion.div
+                    key={trip.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="bg-gray-900/50 border border-white/10 rounded-lg p-6"
+                  >
+                    <h3 className="text-lg font-semibold text-white mb-2">Trip #{trip.id.slice(0, 8)}</h3>
+                    <div className="space-y-2 text-sm text-gray-400">
+                      <div>📅 {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}</div>
+                      <div>🎒 {trip.travelStyle}</div>
+                      <div>🔒 Route encrypted</div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
         </motion.div>
@@ -124,13 +137,6 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </div>
-
-      {/* Trip Creation Modal */}
-      <TripCreationModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        userPublicKey={publicKey || ''}
-      />
     </div>
   );
 }
