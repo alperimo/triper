@@ -115,11 +115,12 @@ export function MapView({
   /**
    * Convert H3 cells to GeoJSON polygons
    */
+  // Convert H3 cells to GeoJSON for map rendering
   const h3CellsGeoJSON = React.useMemo(() => {
     if (h3Cells.length === 0) return null;
     
     return {
-      type: 'FeatureCollection',
+      type: 'FeatureCollection' as const,
       features: h3Cells.map((cell) => {
         const boundary = cellToBoundary(cell.h3Index, true); // [lat, lng] format
         const coordinates = [
@@ -127,9 +128,9 @@ export function MapView({
         ];
         
         return {
-          type: 'Feature',
+          type: 'Feature' as const,
           geometry: {
-            type: 'Polygon',
+            type: 'Polygon' as const,
             coordinates,
           },
           properties: {
