@@ -128,7 +128,7 @@ export function RouteWaypointPanel({
   }, [waypoints, destination]);
 
   return (
-    <div className={`bg-white/95 backdrop-blur-sm shadow-xl rounded-lg border border-gray-200 flex flex-col ${className}`}>
+    <div className={`bg-white shadow-xl rounded-lg border border-gray-200 flex flex-col ${className}`}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <div>
@@ -169,7 +169,7 @@ export function RouteWaypointPanel({
               </button>
 
               {/* Number Badge */}
-              <div className="flex-shrink-0 w-8 h-8 mt-2 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+              <div className="flex-shrink-0 w-8 h-8 mt-2 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
                 {index + 1}
               </div>
 
@@ -223,7 +223,7 @@ export function RouteWaypointPanel({
         {waypoints.length < maxWaypoints && !expandedSearch?.startsWith('waypoint-') && (
           <button
             onClick={addWaypoint}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-purple-400 hover:text-purple-600 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
           >
             <PlusIcon className="w-5 h-5" />
             <span className="font-medium">

@@ -125,7 +125,7 @@ export default function MapPage() {
           <button
             onClick={handleCreateTrip}
             disabled={loading || waypoints.length === 0 || !destination}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+            className="px-6 py-3 bg-primary text-white rounded-lg shadow-lg hover:bg-primary-hover hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
           >
             <CheckIcon className="w-5 h-5" />
             <span>Create Trip</span>
@@ -145,7 +145,7 @@ export default function MapPage() {
             lng: w.lng,
             lat: w.lat,
             label: `${i + 1}`,
-            color: '#8b5cf6',
+            color: '#6b8e23',
           })),
           ...(destination ? [{
             lng: destination.lng,

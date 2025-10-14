@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
+/* Triper - Clean Minimal Travel Theme */
+
 :root {
+  /* Light Theme */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a;
+  
+  /* Primary - Olive Green (buttons, CTAs, active states) */
+  --primary: #6b8e23;
+  --primary-hover: #5a7a1e;
+  --primary-light: #8db33a;
+  --primary-dark: #4a6119;
+  
+  /* Secondary - Beige (widgets, cards, backgrounds) */
+  --secondary: #f5f3f0;        /* Main widget/card backgrounds */
+  --secondary-hover: #eae7e3;  /* Hover states, selected nav buttons */
+  --secondary-light: #faf9f7;  /* Navbar background, subtle backgrounds */
+  --secondary-dark: #d9d5d0;   /* Borders, dividers */
+  
+  /* Neutral Grays */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Semantic Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+  
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  
+  /* Typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f0f0f;
+    --foreground: #f5f5f5;
+    
+    /* Slightly brighter in dark mode */
+    --primary: #7fa92f;
+    --primary-hover: #8db33a;
+    --primary-light: #9dc44d;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useUserStore } from '@/lib/store/user';
-import { WalletButton } from '@/components/wallet/WalletButton';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -21,20 +20,20 @@ export default function DashboardLayout({
   }
 
   const navItems = [
-    { name: 'Map', href: '/map', icon: '🗺️' },
-    { name: 'Matches', href: '/matches', icon: '✨' },
-    { name: 'Profile', href: '/profile', icon: '👤' },
+    { name: 'Map', href: '/map' },
+    { name: 'Matches', href: '/matches' },
+    { name: 'Profile', href: '/profile' },
   ];
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 relative z-50">
+    <div className="h-screen flex flex-col bg-white">
+      {/* Header - Navbar with edge-to-edge content */}
+      <header className="bg-secondary-light border-b border-gray-200 px-2.5 py-3 relative z-50">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/map" className="flex items-center gap-3 group">
+          {/* Logo - Left (close to edge) */}
+          <Link href="/map" className="flex items-center gap-2 group">
             <svg 
-              className="w-8 h-8 text-purple-400 group-hover:text-purple-300 transition-colors" 
+              className="w-7 h-7 text-gray-700 group-hover:text-gray-900 transition-colors" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -42,51 +41,40 @@ export default function DashboardLayout({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <h1 className="text-lg font-semibold text-gray-900">
               Triper
             </h1>
           </Link>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Navigation - Right side (close to edge) */}
+          <nav className="hidden md:flex items-center gap-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative px-4 py-2 rounded-lg transition-colors"
+                  className={`px-4 py-2 rounded-lg text-[15px] transition-all ${
+                    isActive 
+                      ? 'bg-secondary-hover text-gray-900 font-medium' 
+                      : 'text-gray-900 hover:bg-secondary-dark/50'
+                  }`}
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-purple-500/20 rounded-lg"
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <span className="relative flex items-center gap-2">
-                    <span>{item.icon}</span>
-                    <span className={isActive ? 'text-purple-300' : 'text-gray-400 hover:text-gray-300'}>
-                      {item.name}
-                    </span>
-                  </span>
+                  {item.name}
                 </Link>
               );
             })}
           </nav>
-
-          {/* Wallet Button */}
-          <WalletButton />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 relative overflow-hidden">
+      <main className="flex-1 relative overflow-hidden bg-white">
         {children}
       </main>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden bg-gray-900/80 backdrop-blur-md border-t border-white/10 px-4 py-3">
+      <nav className="md:hidden bg-secondary-light border-t border-gray-200 px-2 py-2">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
@@ -94,12 +82,13 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center gap-1"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive 
+                    ? 'bg-secondary-hover text-gray-900' 
+                    : 'text-gray-900 hover:bg-secondary-dark/50'
+                }`}
               >
-                <span className="text-2xl">{item.icon}</span>
-                <span className={`text-xs ${isActive ? 'text-purple-300' : 'text-gray-400'}`}>
-                  {item.name}
-                </span>
+                {item.name}
               </Link>
             );
           })}

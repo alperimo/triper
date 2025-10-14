@@ -197,7 +197,7 @@ export function RouteSearchBar({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-12 pr-20 py-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+          className="w-full pl-12 pr-20 py-3 bg-white border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 placeholder-gray-500"
         />
         
         {searchQuery && (
@@ -215,7 +215,7 @@ export function RouteSearchBar({
             onClick={onTogglePanel}
             className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${
               isPanelOpen 
-                ? 'text-purple-600 bg-purple-50' 
+                ? 'text-primary bg-primary/10' 
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
             title={isPanelOpen ? 'Panel is open' : 'Open route planner'}
@@ -226,21 +226,21 @@ export function RouteSearchBar({
         
         {isLoading && (
           <div className="absolute right-14 top-1/2 -translate-y-1/2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-500"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
           </div>
         )}
       </div>
 
       {/* Dropdown Results */}
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 max-h-96 overflow-y-auto">
           {/* My Location Option */}
           <button
             onClick={handleUseCurrentLocation}
-            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-purple-50 transition-colors text-left border-b border-gray-100"
+            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100"
           >
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <MapPinIcon className="w-5 h-5 text-blue-600" />
+            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+              <MapPinIcon className="w-5 h-5 text-primary" />
             </div>
             <div>
               <div className="font-medium text-gray-900">My Location</div>
@@ -261,7 +261,7 @@ export function RouteSearchBar({
                 <button
                   key={result.id}
                   onClick={() => handleSelectLocation(result)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-purple-50 transition-colors text-left"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                 >
                   <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                     {result.type === 'recent' ? (
