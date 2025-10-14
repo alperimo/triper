@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Calendar, Heart, User, Check, X as XIcon, Loader2, Lock, Unlock } from 'lucide-react';
 import type { Match } from '@/types';
-import { useToast } from '@/components/shared/Toast';
+import { showSuccess, showError } from '@/lib/toast';
 
 interface MatchDetailsModalProps {
   match: Match | null;
@@ -24,7 +24,6 @@ export function MatchDetailsModal({
 }: MatchDetailsModalProps) {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-  const { showToast } = useToast();
 
   if (!match) return null;
 
@@ -34,11 +33,11 @@ export function MatchDetailsModal({
     
     try {
       await onAccept(match.id);
-      showToast('Match accepted! 🎉', 'success');
+      showSuccess('Match accepted! 🎉');
       onClose();
     } catch (error) {
       console.error('Failed to accept match:', error);
-      showToast('Failed to accept match. Please try again.', 'error');
+      showError('Failed to accept match. Please try again.');
     } finally {
       setIsAccepting(false);
     }
@@ -50,11 +49,11 @@ export function MatchDetailsModal({
     
     try {
       await onReject(match.id);
-      showToast('Match rejected', 'info');
+      showSuccess('Match rejected');
       onClose();
     } catch (error) {
       console.error('Failed to reject match:', error);
-      showToast('Failed to reject match. Please try again.', 'error');
+      showError('Failed to reject match. Please try again.');
     } finally {
       setIsRejecting(false);
     }

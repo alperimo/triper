@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Calendar, Heart, Loader2 } from 'lucide-react';
 import { useTrips } from '@/hooks/useTrips';
 import { useArcium } from '@/hooks/useArcium';
-import { useToast } from '@/components/shared/Toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { RouteBuilder } from './RouteBuilder';
 import { DateRangePicker } from './DateRangePicker';
 import { TravelStyleSelector } from './TravelStyleSelector';
@@ -27,19 +27,18 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
 
   const { createTrip } = useTrips();
   const { encryptTripData } = useArcium();
-  const { showToast } = useToast();
 
   const handleNext = () => {
     if (step === 'route' && route.length < 2) {
-      showToast('Please add at least 2 waypoints to your route', 'error');
+      showError('Please add at least 2 waypoints to your route');
       return;
     }
     if (step === 'dates' && (!startDate || !endDate)) {
-      showToast('Please select start and end dates', 'error');
+      showError('Please select start and end dates');
       return;
     }
     if (step === 'interests' && interests.length === 0) {
-      showToast('Please select at least one travel style', 'error');
+      showError('Please select at least one travel style');
       return;
     }
 
@@ -93,7 +92,7 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
 
       // TODO: Sign and send Solana transaction
       // For now, just show success
-      showToast('Trip created successfully! 🎉', 'success');
+      showSuccess('Trip created successfully! 🎉');
       onClose();
 
       // Reset form
@@ -104,7 +103,7 @@ export function TripCreationModal({ isOpen, onClose, userPublicKey }: TripCreati
       setStep('route');
     } catch (error) {
       console.error('Failed to create trip:', error);
-      showToast('Failed to create trip. Please try again.', 'error');
+      showError('Failed to create trip. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
