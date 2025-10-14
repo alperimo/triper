@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import { useTrips } from '@/hooks/useTrips';
 import { useUserStore } from '@/lib/store/user';
 import { showSuccess, showError } from '@/lib/toast';
-import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 export default function MapPage() {
   const { createTrip, loading } = useTrips();
@@ -27,6 +27,7 @@ export default function MapPage() {
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false); // For mobile collapsed state
+  const [isDesktopPanelCollapsed, setIsDesktopPanelCollapsed] = useState(false); // For desktop slide in/out
   const [showSearchForWaypoint, setShowSearchForWaypoint] = useState(false);
 
   // Navigate map to a specific location
@@ -151,8 +152,12 @@ export default function MapPage() {
       {/* Waypoint Panel - Desktop: Left Side, Mobile: Bottom Sheet */}
       {isPanelOpen && (
         <>
-          {/* Desktop Panel */}
-          <div className="hidden md:block absolute left-4 top-4 bottom-4 z-20 w-96">
+          {/* Desktop Panel - Slides in/out from left */}
+          <div 
+            className={`hidden md:block absolute top-4 bottom-4 z-20 w-96 transition-all duration-300 ${
+              isDesktopPanelCollapsed ? '-left-96' : 'left-4'
+            }`}
+          >
             <RouteWaypointPanel
               waypoints={waypoints}
               destination={destination}
@@ -162,11 +167,24 @@ export default function MapPage() {
               }}
               onSelectLocation={handleSearchSelect}
               onFocusWaypoint={handleWaypointFocus}
-              onClose={() => setIsPanelOpen(false)}
-              onRequestAddWaypoint={handleRequestAddWaypoint}
               className="h-full"
             />
           </div>
+
+          {/* Desktop Toggle Button - Right edge of panel */}
+          <button
+            onClick={() => setIsDesktopPanelCollapsed(!isDesktopPanelCollapsed)}
+            className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 w-8 h-16 bg-white hover:bg-gray-50 border border-gray-200 items-center justify-center rounded-r-lg shadow-md transition-all duration-300 ${
+              isDesktopPanelCollapsed ? 'left-0' : 'left-[25rem]'
+            }`}
+            title={isDesktopPanelCollapsed ? 'Show route planner' : 'Hide route planner'}
+          >
+            {isDesktopPanelCollapsed ? (
+              <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+            ) : (
+              <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
 
           {/* Mobile Bottom Sheet - Draggable with collapsed state */}
           <div 

@@ -185,15 +185,6 @@ export function RouteWaypointPanel({
             Add up to {maxWaypoints} waypoints
           </p>
         </div>
-        {onClose && !isMobile && (
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-            title="Close panel"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
       {/* Waypoints List - Hide when collapsed on mobile */}
