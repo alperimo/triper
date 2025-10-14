@@ -35,6 +35,7 @@ interface RouteWaypointPanelProps {
   destination?: Waypoint;
   onChange: (waypoints: Waypoint[], destination?: Waypoint) => void;
   onFocusWaypoint?: (waypoint: Waypoint) => void;
+  onClose?: () => void;
   className?: string;
   maxWaypoints?: number;
 }
@@ -44,6 +45,7 @@ export function RouteWaypointPanel({
   destination,
   onChange,
   onFocusWaypoint,
+  onClose,
   className = '',
   maxWaypoints = 20,
 }: RouteWaypointPanelProps) {
@@ -128,11 +130,22 @@ export function RouteWaypointPanel({
   return (
     <div className={`bg-white/95 backdrop-blur-sm shadow-xl rounded-lg border border-gray-200 flex flex-col ${className}`}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Plan Your Route</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          Add up to {maxWaypoints} waypoints
-        </p>
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Plan Your Route</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Add up to {maxWaypoints} waypoints
+          </p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            title="Close panel"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Waypoints List */}

@@ -23,6 +23,7 @@ export default function MapPage() {
     lng: number;
   } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Navigate map to a specific location
   const navigateToLocation = useCallback((lat: number, lng: number) => {
@@ -33,6 +34,7 @@ export default function MapPage() {
   const handleSearchSelect = useCallback((location: { lat: number; lng: number; name: string; address: string }) => {
     setSelectedLocation(location);
     navigateToLocation(location.lat, location.lng);
+    setIsPanelOpen(true); // Show panel when location is selected
   }, [navigateToLocation]);
 
   // Handle waypoint focus
@@ -95,22 +97,27 @@ export default function MapPage() {
         <RouteSearchBar
           onSelectLocation={handleSearchSelect}
           placeholder="Search for places..."
+          onTogglePanel={() => setIsPanelOpen(!isPanelOpen)}
+          isPanelOpen={isPanelOpen}
         />
       </div>
 
       {/* Waypoint Panel - Left Side */}
-      <div className="absolute left-4 top-24 bottom-4 z-20 w-96">
-        <RouteWaypointPanel
-          waypoints={waypoints}
-          destination={destination}
-          onChange={(newWaypoints, newDestination) => {
-            setWaypoints(newWaypoints);
-            setDestination(newDestination);
-          }}
-          onFocusWaypoint={handleWaypointFocus}
-          className="h-full"
-        />
-      </div>
+      {isPanelOpen && (
+        <div className="absolute left-4 top-24 bottom-4 z-20 w-96">
+          <RouteWaypointPanel
+            waypoints={waypoints}
+            destination={destination}
+            onChange={(newWaypoints, newDestination) => {
+              setWaypoints(newWaypoints);
+              setDestination(newDestination);
+            }}
+            onFocusWaypoint={handleWaypointFocus}
+            onClose={() => setIsPanelOpen(false)}
+            className="h-full"
+          />
+        </div>
+      )}
 
       {/* Create Trip Button - Bottom Right */}
       {hasRoute && (

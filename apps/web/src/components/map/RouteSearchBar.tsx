@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, MapPinIcon, ClockIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, MapPinIcon, ClockIcon, XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline';
 
 interface SearchResult {
   id: string;
@@ -25,7 +25,9 @@ interface SearchResult {
 interface RouteSearchBarProps {
   onSelectLocation: (location: { lat: number; lng: number; name: string; address: string }) => void;
   placeholder?: string;
-  className?: string
+  className?: string;
+  onTogglePanel?: () => void;
+  isPanelOpen?: boolean;
 }
 
 const RECENT_SEARCHES_KEY = 'triper_recent_searches';
@@ -34,7 +36,9 @@ const MAX_RECENT_SEARCHES = 5;
 export function RouteSearchBar({ 
   onSelectLocation, 
   placeholder = 'Search for a place',
-  className = '' 
+  className = '',
+  onTogglePanel,
+  isPanelOpen = false
 }: RouteSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -193,20 +197,35 @@ export function RouteSearchBar({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-12 pr-10 py-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+          className="w-full pl-12 pr-20 py-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 placeholder-gray-500"
         />
         
         {searchQuery && (
           <button
             onClick={clearSearch}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
         )}
         
+        {/* Panel Toggle Button */}
+        {onTogglePanel && (
+          <button
+            onClick={onTogglePanel}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${
+              isPanelOpen 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+            title={isPanelOpen ? 'Panel is open' : 'Open route planner'}
+          >
+            <Bars3Icon className="w-5 h-5" />
+          </button>
+        )}
+        
         {isLoading && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <div className="absolute right-14 top-1/2 -translate-y-1/2">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-500"></div>
           </div>
         )}
