@@ -43,28 +43,35 @@ export default function MapPage() {
     setPendingPin(location);
     navigateToLocation(location.lat, location.lng);
     setShowSearchForWaypoint(false); // Hide search after selection
+    
+    // Immediately add as pending waypoint to show in route planner
+    const pendingWaypoint: Waypoint = {
+      id: `pending-${Date.now()}`,
+      ...location,
+    };
+    setWaypoints(prev => [...prev, pendingWaypoint]);
+    setIsPanelOpen(true); // Show panel with the pending waypoint
+    setIsPanelCollapsed(false); // Ensure mobile panel is expanded
+    setIsDesktopPanelCollapsed(false); // Ensure desktop panel is visible
   }, [navigateToLocation]);
 
-  // Confirm pin placement - add as waypoint
+  // Confirm pin placement - convert pending to confirmed
   const handleConfirmPin = useCallback(() => {
     if (!pendingPin) return;
     
-    const newWaypoint: Waypoint = {
-      id: `waypoint-${Date.now()}`,
-      ...pendingPin,
-    };
-    
-    // Add to existing waypoints (not replace)
-    setWaypoints(prev => [...prev, newWaypoint]);
+    // Just clear the pending state - waypoint is already in the list
     setPendingPin(null);
-    setIsPanelOpen(true); // Ensure panel is open
   }, [pendingPin]);
 
-  // Cancel pin placement
+  // Cancel pin placement - remove the pending waypoint
   const handleCancelPin = useCallback(() => {
+    if (pendingPin) {
+      // Remove the last waypoint (the pending one)
+      setWaypoints(prev => prev.slice(0, -1));
+    }
     setPendingPin(null);
-    setShowSearchForWaypoint(false); // Also hide search
-  }, []);
+    setShowSearchForWaypoint(false);
+  }, [pendingPin]);
 
   // Handle waypoint focus
   const handleWaypointFocus = useCallback((waypoint: Waypoint) => {
@@ -108,18 +115,20 @@ export default function MapPage() {
   }, [publicKey, waypoints, destination, createTrip]);
 
   const hasRoute = waypoints.length > 0 || destination;
-  const showSearchBar = !isPanelOpen && waypoints.length === 0 && !pendingPin; // Only show when panel is closed AND no waypoints
+  const hasAnyWaypoints = waypoints.length > 0;
+  const showSearchBar = !hasAnyWaypoints && !pendingPin; // Show map search when no waypoints and no pending pin
+  const showPanel = hasAnyWaypoints; // Show panel ONLY if there are waypoints (completely hidden otherwise)
 
   return (
     <div className="relative h-full w-full">
-      {/* Search Bar - Only show when panel is closed AND no waypoints yet */}
+      {/* Search Bar - Only show when no waypoints and no pending pin */}
       {showSearchBar && (
         <div className="absolute top-4 left-4 right-4 z-20 md:right-auto md:w-96">
           <RouteSearchBar
             onSelectLocation={handleSearchSelect}
             placeholder="Search for places..."
-            onTogglePanel={() => setIsPanelOpen(!isPanelOpen)}
-            isPanelOpen={isPanelOpen}
+            onTogglePanel={() => setIsPanelOpen(true)}
+            isPanelOpen={false}
           />
         </div>
       )}
@@ -149,8 +158,8 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Waypoint Panel - Desktop: Left Side, Mobile: Bottom Sheet */}
-      {isPanelOpen && (
+      {/* Waypoint Panel - Only show if there are waypoints OR panel is manually opened */}
+      {showPanel && (
         <>
           {/* Desktop Panel - Slides in/out from left */}
           <div 
@@ -167,6 +176,7 @@ export default function MapPage() {
               }}
               onSelectLocation={handleSearchSelect}
               onFocusWaypoint={handleWaypointFocus}
+              hasPendingPin={!!pendingPin}
               className="h-full"
             />
           </div>
@@ -201,6 +211,7 @@ export default function MapPage() {
               onFocusWaypoint={handleWaypointFocus}
               onClose={() => setIsPanelCollapsed(!isPanelCollapsed)}
               onRequestAddWaypoint={handleRequestAddWaypoint}
+              hasPendingPin={!!pendingPin}
               isMobile={true}
               isCollapsed={isPanelCollapsed}
               onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}

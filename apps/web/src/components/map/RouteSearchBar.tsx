@@ -28,6 +28,7 @@ interface RouteSearchBarProps {
   className?: string;
   onTogglePanel?: () => void;
   isPanelOpen?: boolean;
+  fullWidthDropdown?: boolean; // Make dropdown span full parent width
 }
 
 const RECENT_SEARCHES_KEY = 'triper_recent_searches';
@@ -38,7 +39,8 @@ export function RouteSearchBar({
   placeholder = 'Search for a place',
   className = '',
   onTogglePanel,
-  isPanelOpen = false
+  isPanelOpen = false,
+  fullWidthDropdown = false
 }: RouteSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -180,10 +182,29 @@ export function RouteSearchBar({
 
   const displayResults = searchQuery.length >= 2 ? results : recentSearches;
 
+  // Calculate dropdown position for full width mode
+  const getDropdownStyles = () => {
+    if (!fullWidthDropdown || !searchRef.current) return {};
+    
+    // Find the panel container (has p-4 class)
+    let panel = searchRef.current.closest('.p-4');
+    if (!panel) panel = searchRef.current.closest('[class*="p-"]');
+    
+    if (panel) {
+      const searchRect = searchRef.current.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      return {
+        left: `${panelRect.left - searchRect.left}px`,
+        right: `${searchRect.right - panelRect.right}px`,
+      };
+    }
+    return {};
+  };
+
   return (
     <div ref={searchRef} className={`relative ${className}`}>
       {/* Search Input */}
-      <div className="relative">
+      <div className="relative w-full">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
           <MagnifyingGlassIcon className="w-5 h-5" />
         </div>
@@ -197,30 +218,15 @@ export function RouteSearchBar({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-12 pr-20 py-3 bg-white border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 placeholder-gray-500"
+          className="w-full pl-12 pr-10 py-3 bg-white border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 placeholder-gray-500"
         />
         
         {searchQuery && (
           <button
             onClick={clearSearch}
-            className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <XMarkIcon className="w-5 h-5" />
-          </button>
-        )}
-        
-        {/* Panel Toggle Button */}
-        {onTogglePanel && (
-          <button
-            onClick={onTogglePanel}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${
-              isPanelOpen 
-                ? 'text-primary bg-primary/10' 
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-            title={isPanelOpen ? 'Panel is open' : 'Open route planner'}
-          >
-            <Bars3Icon className="w-5 h-5" />
           </button>
         )}
         
@@ -231,9 +237,14 @@ export function RouteSearchBar({
         )}
       </div>
 
-      {/* Dropdown Results */}
+      {/* Dropdown Results - Spans full panel width when enabled */}
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 max-h-96 overflow-y-auto">
+        <div 
+          className={`absolute top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 max-h-96 overflow-y-auto ${
+            fullWidthDropdown ? '' : 'w-full'
+          }`}
+          style={fullWidthDropdown ? { left: '-2.5rem', right: '-2.5rem' } : {}}
+        >
           {/* My Location Option */}
           <button
             onClick={handleUseCurrentLocation}

@@ -43,6 +43,7 @@ interface RouteWaypointPanelProps {
   isCollapsed?: boolean; // For mobile collapsed state
   onToggleCollapse?: () => void; // Toggle collapse on mobile
   onRequestAddWaypoint?: () => void; // Callback to trigger external search/pin flow
+  hasPendingPin?: boolean; // Disable adding waypoints when there's a pending pin confirmation
 }
 
 export function RouteWaypointPanel({
@@ -58,9 +59,19 @@ export function RouteWaypointPanel({
   isCollapsed = false,
   onToggleCollapse,
   onRequestAddWaypoint,
+  hasPendingPin = false,
 }: RouteWaypointPanelProps) {
   const [expandedSearch, setExpandedSearch] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [previousWaypointsLength, setPreviousWaypointsLength] = useState(waypoints.length);
+
+  // Close search field when a waypoint is actually added (after pin confirmation)
+  React.useEffect(() => {
+    if (waypoints.length > previousWaypointsLength) {
+      setExpandedSearch(null);
+    }
+    setPreviousWaypointsLength(waypoints.length);
+  }, [waypoints.length, previousWaypointsLength]);
 
   const addWaypoint = () => {
     if (waypoints.length >= maxWaypoints) return;
@@ -74,7 +85,7 @@ export function RouteWaypointPanel({
     // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
     if (onSelectLocation) {
       onSelectLocation(location);
-      setExpandedSearch(null);
+      // Don't close search yet - wait for pin confirmation
       return;
     }
     
@@ -92,7 +103,7 @@ export function RouteWaypointPanel({
     // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
     if (onSelectLocation) {
       onSelectLocation(location);
-      setExpandedSearch(null);
+      // Don't close search yet - wait for pin confirmation
       return;
     }
     
@@ -236,12 +247,14 @@ export function RouteWaypointPanel({
             <div className="flex-shrink-0 w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
               {waypoints.length + 1}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0 relative">
               <RouteSearchBar
                 onSelectLocation={(location) => {
                   setWaypoint(waypoints.length, location);
                 }}
                 placeholder="Search for waypoint..."
+                fullWidthDropdown={true}
+                className="w-full"
               />
             </div>
             <button
@@ -253,15 +266,23 @@ export function RouteWaypointPanel({
           </div>
         )}
 
-        {/* Add Waypoint Button */}
+        {/* Add Waypoint Button - Disabled when there's a pending pin */}
         {waypoints.length < maxWaypoints && !expandedSearch?.startsWith('waypoint-') && (
           <button
             onClick={addWaypoint}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
+            disabled={hasPendingPin}
+            className={`w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
+              hasPendingPin
+                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'border-gray-300 text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5'
+            }`}
           >
             <PlusIcon className="w-5 h-5" />
             <span className="font-medium">
-              {waypoints.length === 0 ? 'Add starting point' : 'Add waypoint'}
+              {hasPendingPin 
+                ? 'Confirm or cancel pending location first'
+                : waypoints.length === 0 ? 'Add starting point' : 'Add waypoint'
+              }
             </span>
           </button>
         )}
@@ -297,10 +318,12 @@ export function RouteWaypointPanel({
                 <div className="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center">
                   <MapPinIcon className="w-5 h-5" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 relative">
                   <RouteSearchBar
                     onSelectLocation={setDestinationWaypoint}
                     placeholder="Search for destination..."
+                    fullWidthDropdown={true}
+                    className="w-full"
                   />
                 </div>
                 <button
@@ -313,10 +336,17 @@ export function RouteWaypointPanel({
             ) : (
               <button
                 onClick={addDestination}
-                className="w-full py-3 border-2 border-dashed border-red-300 rounded-lg text-red-600 hover:border-red-400 hover:text-red-700 transition-colors flex items-center justify-center gap-2"
+                disabled={hasPendingPin}
+                className={`w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                  hasPendingPin
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-red-300 text-red-600 hover:border-red-400 hover:text-red-700'
+                }`}
               >
                 <MapPinIcon className="w-5 h-5" />
-                <span className="font-medium">Add destination</span>
+                <span className="font-medium">
+                  {hasPendingPin ? 'Confirm or cancel pending location first' : 'Add destination'}
+                </span>
               </button>
             )}
           </>
