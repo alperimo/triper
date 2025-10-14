@@ -33,7 +33,7 @@ export default function DashboardLayout({
           {/* Logo - Left (close to edge) */}
           <Link href="/map" className="flex items-center gap-2 group">
             <svg 
-              className="w-7 h-7 text-gray-700 group-hover:text-gray-900 transition-colors" 
+              className="w-7 h-7 text-primary group-hover:text-primary-hover transition-colors" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
