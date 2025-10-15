@@ -355,20 +355,6 @@ describe("Arcium Trip Matching", () => {
       computationOffset
     );
     console.log("  Computation Account:", computationAccount.toString());
-
-    // Derive other required Arcium accounts
-    const arciumProgAddress = getArciumProgAddress();
-    const baseSeedCompDefAcc = getArciumAccountBaseSeed("ComputationDefinitionAccount");
-    const compDefOffset = getCompDefAccOffset("compute_trip_match");
-    const compDefAccount = PublicKey.findProgramAddressSync(
-      [baseSeedCompDefAcc, program.programId.toBuffer(), compDefOffset],
-      arciumProgAddress
-    )[0];
-    const executingPool = getExecutingPoolAccAddress(program.programId);
-    const mempoolAccount = getMempoolAccAddress(program.programId);
-    const mxeAccount = getMXEAccAddress(program.programId);
-    
-
     // Convert ciphertext from number[][] to Buffer
     // cipher.encrypt() returns field elements as number[][]
     // We need to convert to bytes for the Solana instruction
