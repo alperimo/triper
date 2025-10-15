@@ -69,33 +69,38 @@ pub mod triper {
     pub fn compute_trip_match(
         ctx: Context<ComputeTripMatch>,
         computation_offset: u64,
-        ciphertext_a: Vec<[u8; 32]>,
-        ciphertext_b: Vec<[u8; 32]>,
+        ciphertext_a_bytes: Vec<u8>,
+        ciphertext_b_bytes: Vec<u8>,
         pub_key: [u8; 32],
         nonce: u128,
     ) -> Result<()> {
         ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         
         // Build arguments similar to hello-world example
-        // For encrypted data, we pass:
-        // 1. Argument::ArcisPubkey(pub_key) - ephemeral public key
-        // 2. Argument::PlaintextU128(nonce) - encryption nonce
-        // 3. Argument::EncryptedU8 for each encrypted field element from ciphertext_a
-        // 4. Argument::EncryptedU8 for each encrypted field element from ciphertext_b
+        // Ciphertext from RescueCipher is serialized as bytes
+        // We need to split into 32-byte chunks for EncryptedU8 arguments
         
         let mut args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
         ];
         
-        // Add all encrypted field elements from trip A
-        for encrypted_field in ciphertext_a.iter() {
-            args.push(Argument::EncryptedU8(*encrypted_field));
+        // Split ciphertext_a into 32-byte chunks
+        for chunk in ciphertext_a_bytes.chunks(32) {
+            if chunk.len() == 32 {
+                let mut field = [0u8; 32];
+                field.copy_from_slice(chunk);
+                args.push(Argument::EncryptedU8(field));
+            }
         }
         
-        // Add all encrypted field elements from trip B
-        for encrypted_field in ciphertext_b.iter() {
-            args.push(Argument::EncryptedU8(*encrypted_field));
+        // Split ciphertext_b into 32-byte chunks
+        for chunk in ciphertext_b_bytes.chunks(32) {
+            if chunk.len() == 32 {
+                let mut field = [0u8; 32];
+                field.copy_from_slice(chunk);
+                args.push(Argument::EncryptedU8(field));
+            }
         }
 
         queue_computation(
@@ -107,8 +112,8 @@ pub mod triper {
         )?;
         
         msg!("Queued MPC computation for match record: {}", ctx.accounts.match_record.key());
-        msg!("Trip A: {} encrypted fields", ciphertext_a.len());
-        msg!("Trip B: {} encrypted fields", ciphertext_b.len());
+        msg!("Trip A: {} bytes ({} encrypted fields)", ciphertext_a_bytes.len(), ciphertext_a_bytes.len() / 32);
+        msg!("Trip B: {} bytes ({} encrypted fields)", ciphertext_b_bytes.len(), ciphertext_b_bytes.len() / 32);
         
         Ok(())
     }

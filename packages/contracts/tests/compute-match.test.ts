@@ -356,21 +356,24 @@ describe("Arcium Trip Matching", () => {
     );
     console.log("  Computation Account:", computationAccount.toString());
     
-    // Convert ciphertext from number[][] to the format expected by Solana
-    // cipher.encrypt() returns an array of encrypted field elements
-    // Each element is a number array that needs to be converted using Array.from()
-    // Following the hello-world example pattern
+    // Convert ciphertext from number[][] to bytes
+    // cipher.encrypt() returns an array of encrypted field elements (each 32 bytes)
+    // We need to flatten this into a single byte array
     console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA), ciphertextA.length);
     console.log("Ciphertext A[0] length:", ciphertextA[0]?.length);
     
-    const ciphertextAFormatted = ciphertextA.map(field => Array.from(field));
-    const ciphertextBFormatted = ciphertextB.map(field => Array.from(field));
+    // Flatten the 2D array into a single Buffer
+    const ciphertextABytes = Buffer.concat(ciphertextA.map(field => Buffer.from(field)));
+    const ciphertextBBytes = Buffer.concat(ciphertextB.map(field => Buffer.from(field)));
+    
+    console.log(`Flattened ciphertext A: ${ciphertextABytes.length} bytes`);
+    console.log(`Flattened ciphertext B: ${ciphertextBBytes.length} bytes`);
 
     const queueSig = await program.methods
       .computeTripMatch(
         computationOffset,
-        ciphertextAFormatted,
-        ciphertextBFormatted,
+        ciphertextABytes,
+        ciphertextBBytes,
         Array.from(publicKey),
         new anchor.BN(deserializeLE(nonce).toString())
       )
