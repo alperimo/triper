@@ -130,39 +130,24 @@
             "Match record to be updated in callback"
           ],
           "writable": true
+        },
+        {
+          "name": "trip_a",
+          "docs": [
+            "Trip A - contains encrypted_data and public_key"
+          ]
+        },
+        {
+          "name": "trip_b",
+          "docs": [
+            "Trip B - contains encrypted_data and public_key"
+          ]
         }
       ],
       "args": [
         {
           "name": "computation_offset",
           "type": "u64"
-        },
-        {
-          "name": "ciphertext_a",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "ciphertext_b",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "pub_key",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
         },
         {
           "name": "nonce",

@@ -11,19 +11,22 @@ import {
   getArciumProgAddress,
   uploadCircuit,
   buildFinalizeCompDefTx,
-  RescueCipher,
   deserializeLE,
-  getMXEPublicKey,
   getMXEAccAddress,
   getMempoolAccAddress,
   getCompDefAccAddress,
   getExecutingPoolAccAddress,
-  getComputationAccAddress,
-  x25519,
+  getComputationAccAddress
 } from "@arcium-hq/client";
 import * as fs from "fs";
 import * as os from "os";
 import { expect } from "chai";
+import {
+  getMXEPublicKeyWithRetry,
+  createSampleTripData,
+  createVariantTripData,
+} from "./utils";
+import { createTrip } from "../../../apps/web/src/lib/solana/create-trip";
 
 describe("Arcium Trip Matching", () => {
   // Configure the client to use the local cluster
@@ -163,169 +166,61 @@ describe("Arcium Trip Matching", () => {
     );
     console.log("MXE x25519 pubkey:", Buffer.from(mxePublicKey).toString("hex").slice(0, 16) + "...");
 
-    // Generate ephemeral key pair for this computation
-    const privateKey = x25519.utils.randomSecretKey();
-    const publicKey = x25519.getPublicKey(privateKey);
-
-    // Derive shared secret and create cipher
-    const sharedSecret = x25519.getSharedSecret(privateKey, mxePublicKey);
-    const cipher = new RescueCipher(sharedSecret);
-
-    // Create realistic TripData matching the circuit structure
-    // TripData in encrypted-ixs/src/trip_matching.rs:
-    // pub struct TripData {
-    //     waypoints: [u64; 20],     // H3 cells at resolution 7
-    //     waypoint_count: u8,
-    //     start_date: i64,          // Unix timestamp
-    //     end_date: i64,
-    //     interests: [bool; 32],
-    // }
-    
-    // Sample H3 cells at resolution 7 (San Francisco to LA route)
-    const tripAWaypoints = [
-      BigInt("0x872830828ffffff"), // SF
-      BigInt("0x872830829ffffff"), // San Jose
-      BigInt("0x87283082affffff"), // Monterey
-      BigInt("0x87283082bffffff"), // Big Sur
-      BigInt("0x8728343c8ffffff"), // Santa Barbara
-      BigInt("0x8728343c9ffffff"), // LA
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), // Padded to 20
-    ];
-    
-    const tripBWaypoints = [
-      BigInt("0x872830828ffffff"), // SF (same as A)
-      BigInt("0x872830829ffffff"), // San Jose (same as A)
-      BigInt("0x87283082cffffff"), // Different route
-      BigInt("0x87283082dffffff"),
-      BigInt("0x8728343c8ffffff"), // Santa Barbara (same as A)
-      BigInt("0x8728343c9ffffff"), // LA (same as A)
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0),
-    ];
-    
-    // Dates: Use unique timestamps to avoid account conflicts on re-runs
-    // Adding randomness so trips are unique each test run
-    const dateOffset = Math.floor(Date.now() / 1000);
-    const startDate = BigInt(dateOffset);
-    const endDate = BigInt(dateOffset + 14 * 24 * 60 * 60); // 14 days later
-    
-    // Interests: hiking (0), photography (1), food (2) = true, rest false
-    const interestsA = [
-      BigInt(1), BigInt(1), BigInt(1), // hiking, photography, food
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-    ];
-    
-    const interestsB = [
-      BigInt(1), BigInt(1), BigInt(0), // hiking, photography (overlap), no food
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-      BigInt(0), BigInt(0), BigInt(0), BigInt(0),
-    ];
-    
-    // Serialize TripData according to circuit structure
-    const tripAData = [
-      ...tripAWaypoints,      // 20 waypoints (u64)
-      BigInt(6),              // waypoint_count (u8) - 6 actual waypoints
-      startDate,              // start_date (i64)
-      endDate,                // end_date (i64)
-      ...interestsA,          // 32 interests (bool)
-    ];
-    
-    const tripBData = [
-      ...tripBWaypoints,
-      BigInt(6),
-      startDate,
-      endDate,
-      ...interestsB,
-    ];
-
-    // Encrypt the trip data
-    const nonce = randomBytes(16);
-    const ciphertextA = cipher.encrypt(tripAData, nonce);
-    const ciphertextB = cipher.encrypt(tripBData, nonce);
-
-    console.log("Trip data encrypted with nonce:", Buffer.from(nonce).toString("hex"));
-    console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA) ? `array of ${ciphertextA.length}` : 'not array');
-    console.log("Ciphertext A[0] type:", typeof ciphertextA[0], ciphertextA[0] instanceof Uint8Array ? 'Uint8Array' : Array.isArray(ciphertextA[0]) ? 'Array' : 'other');
-    if (ciphertextA[0]) {
-      console.log("Ciphertext A[0] length:", ciphertextA[0].length);
-    }
+    // Create trip data using helpers
+    const tripAData = createSampleTripData();
+    const tripBData = createVariantTripData();
 
     // Step 1: Create Trip A
     console.log("\n📍 Creating Trip A (San Francisco -> LA)...");
-    const [tripAPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("trip"),
-        owner.publicKey.toBuffer(),
-        Buffer.from(new anchor.BN(startDate.toString()).toArrayLike(Buffer, "le", 8)),
-      ],
-      program.programId
+    const tripAResult = await createTrip(
+      program,
+      provider as anchor.AnchorProvider,
+      tripAData.waypoints,
+      tripAData.destination,
+      tripAData.startDate,
+      tripAData.endDate,
+      tripAData.interests
     );
-
-    const destinationHashA = Buffer.from(new Array(32).fill(1)); // Simple hash for SF-LA area
-    await program.methods
-      .createTrip(
-        Array.from(destinationHashA),
-        new anchor.BN(startDate.toString()),
-        new anchor.BN(endDate.toString()),
-        Buffer.from(ciphertextA[0]), // Use encrypted data as Buffer
-        Array.from(publicKey)
-      )
-      .accountsPartial({
-        trip: tripAPda,
-        user: owner.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([owner])
-      .rpc();
-    console.log("✅ Trip A created:", tripAPda.toBase58());
+    console.log("✅ Trip A created:", tripAResult.tripPDA.toBase58());
 
     // Step 2: Create Trip B
     console.log("\n📍 Creating Trip B (San Francisco -> LA, different user)...");
-    const [tripBPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("trip"),
-        tripOwnerB.publicKey.toBuffer(),
-        Buffer.from(new anchor.BN(startDate.toString()).toArrayLike(Buffer, "le", 8)),
-      ],
-      program.programId
+    
+    // Change provider wallet to tripOwnerB temporarily
+    const originalWallet = (provider as any).wallet;
+    (provider as any).wallet = {
+      publicKey: tripOwnerB.publicKey,
+      signTransaction: async (tx: any) => {
+        tx.partialSign(tripOwnerB);
+        return tx;
+      },
+      signAllTransactions: async (txs: any[]) => {
+        txs.forEach(tx => tx.partialSign(tripOwnerB));
+        return txs;
+      },
+    };
+    
+    const tripBResult = await createTrip(
+      program,
+      provider as anchor.AnchorProvider,
+      tripBData.waypoints,
+      tripBData.destination,
+      tripBData.startDate,
+      tripBData.endDate,
+      tripBData.interests
     );
+    console.log("✅ Trip B created:", tripBResult.tripPDA.toBase58());
+    
+    // Restore original wallet
+    (provider as any).wallet = originalWallet;
 
-    const destinationHashB = Buffer.from(new Array(32).fill(1)); // Same area
-    await program.methods
-      .createTrip(
-        Array.from(destinationHashB),
-        new anchor.BN(startDate.toString()),
-        new anchor.BN(endDate.toString()),
-        Buffer.from(ciphertextB[0]), // Use encrypted data as Buffer
-        Array.from(publicKey)
-      )
-      .accountsPartial({
-        trip: tripBPda,
-        user: tripOwnerB.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([tripOwnerB])
-      .rpc();
-    console.log("✅ Trip B created:", tripBPda.toBase58());
+    // Generate nonce for MPC computation
+    const nonce = randomBytes(16);
 
     // Step 3: Initiate Match (creates MatchRecord)
     console.log("\n🤝 Initiating match between trips...");
     const [matchRecordPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("match"), tripAPda.toBuffer(), tripBPda.toBuffer()],
+      [Buffer.from("match"), tripAResult.tripPDA.toBuffer(), tripBResult.tripPDA.toBuffer()],
       program.programId
     );
 
@@ -333,8 +228,8 @@ describe("Arcium Trip Matching", () => {
       .initiateMatch()
       .accountsPartial({
         payer: owner.publicKey,
-        tripA: tripAPda,
-        tripB: tripBPda,
+        tripA: tripAResult.tripPDA,
+        tripB: tripBResult.tripPDA,
         matchRecord: matchRecordPda,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
@@ -355,26 +250,10 @@ describe("Arcium Trip Matching", () => {
       computationOffset
     );
     console.log("  Computation Account:", computationAccount.toString());
-    
-    // Convert ciphertext from number[][] to bytes
-    // cipher.encrypt() returns an array of encrypted field elements (each 32 bytes)
-    // We need to flatten this into a single byte array
-    console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA), ciphertextA.length);
-    console.log("Ciphertext A[0] length:", ciphertextA[0]?.length);
-    
-    // Flatten the 2D array into a single Buffer
-    const ciphertextABytes = Buffer.concat(ciphertextA.map(field => Buffer.from(field)));
-    const ciphertextBBytes = Buffer.concat(ciphertextB.map(field => Buffer.from(field)));
-    
-    console.log(`Flattened ciphertext A: ${ciphertextABytes.length} bytes`);
-    console.log(`Flattened ciphertext B: ${ciphertextBBytes.length} bytes`);
 
     const queueSig = await program.methods
       .computeTripMatch(
         computationOffset,
-        ciphertextABytes,
-        ciphertextBBytes,
-        Array.from(publicKey),
         new anchor.BN(deserializeLE(nonce).toString())
       )
       .accountsPartial({
@@ -391,11 +270,11 @@ describe("Arcium Trip Matching", () => {
           Buffer.from(getCompDefAccOffset("compute_trip_match")).readUInt32LE()
         ),
         matchRecord: matchRecordPda,
+        tripA: tripAResult.tripPDA,
+        tripB: tripBResult.tripPDA,
       })
       .signers([])
-      .rpc();
-
-    console.log("✅ Computation queued!");
+      .rpc();    console.log("✅ Computation queued!");
     console.log("   Transaction:", queueSig);
 
     console.log("\n⏳ Waiting for MPC computation to complete...");
@@ -552,35 +431,6 @@ describe("Arcium Trip Matching", () => {
     return sig;
   }
 });
-
-async function getMXEPublicKeyWithRetry(
-  provider: anchor.AnchorProvider,
-  programId: PublicKey,
-  maxRetries: number = 10,
-  retryDelayMs: number = 500
-): Promise<Uint8Array> {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const mxePublicKey = await getMXEPublicKey(provider, programId);
-      if (mxePublicKey) {
-        return mxePublicKey;
-      }
-    } catch (error) {
-      console.log(`Attempt ${attempt} failed to fetch MXE public key:`, error);
-    }
-
-    if (attempt < maxRetries) {
-      console.log(
-        `Retrying in ${retryDelayMs}ms... (attempt ${attempt}/${maxRetries})`
-      );
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    }
-  }
-
-  throw new Error(
-    `Failed to fetch MXE public key after ${maxRetries} attempts`
-  );
-}
 
 function readKpJson(path: string): anchor.web3.Keypair {
   const file = fs.readFileSync(path);

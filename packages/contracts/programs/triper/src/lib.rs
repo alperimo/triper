@@ -69,24 +69,26 @@ pub mod triper {
     pub fn compute_trip_match(
         ctx: Context<ComputeTripMatch>,
         computation_offset: u64,
-        ciphertext_a_bytes: Vec<u8>,
-        ciphertext_b_bytes: Vec<u8>,
-        pub_key: [u8; 32],
         nonce: u128,
     ) -> Result<()> {
         ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         
-        // Build arguments similar to hello-world example
-        // Ciphertext from RescueCipher is serialized as bytes
-        // We need to split into 32-byte chunks for EncryptedU8 arguments
+        // Get encrypted data from Trip accounts
+        let trip_a = &ctx.accounts.trip_a;
+        let trip_b = &ctx.accounts.trip_b;
         
+        // Use Trip A's public key (both trips should use MXE's public key in production)
+        let pub_key = trip_a.public_key;
+        
+        // Build arguments for Arcium MPC
+        // Following hello-world example: pub_key, nonce, then encrypted field elements
         let mut args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
         ];
         
-        // Split ciphertext_a into 32-byte chunks
-        for chunk in ciphertext_a_bytes.chunks(32) {
+        // Split trip_a encrypted_data into 32-byte chunks for EncryptedU8 arguments
+        for chunk in trip_a.encrypted_data.chunks(32) {
             if chunk.len() == 32 {
                 let mut field = [0u8; 32];
                 field.copy_from_slice(chunk);
@@ -94,8 +96,8 @@ pub mod triper {
             }
         }
         
-        // Split ciphertext_b into 32-byte chunks
-        for chunk in ciphertext_b_bytes.chunks(32) {
+        // Split trip_b encrypted_data into 32-byte chunks for EncryptedU8 arguments
+        for chunk in trip_b.encrypted_data.chunks(32) {
             if chunk.len() == 32 {
                 let mut field = [0u8; 32];
                 field.copy_from_slice(chunk);
@@ -112,8 +114,8 @@ pub mod triper {
         )?;
         
         msg!("Queued MPC computation for match record: {}", ctx.accounts.match_record.key());
-        msg!("Trip A: {} bytes ({} encrypted fields)", ciphertext_a_bytes.len(), ciphertext_a_bytes.len() / 32);
-        msg!("Trip B: {} bytes ({} encrypted fields)", ciphertext_b_bytes.len(), ciphertext_b_bytes.len() / 32);
+        msg!("Trip A: {} bytes ({} encrypted fields)", trip_a.encrypted_data.len(), trip_a.encrypted_data.len() / 32);
+        msg!("Trip B: {} bytes ({} encrypted fields)", trip_b.encrypted_data.len(), trip_b.encrypted_data.len() / 32);
         
         Ok(())
     }

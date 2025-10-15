@@ -136,39 +136,24 @@ export type Triper = {
             "Match record to be updated in callback"
           ],
           "writable": true
+        },
+        {
+          "name": "tripA",
+          "docs": [
+            "Trip A - contains encrypted_data and public_key"
+          ]
+        },
+        {
+          "name": "tripB",
+          "docs": [
+            "Trip B - contains encrypted_data and public_key"
+          ]
         }
       ],
       "args": [
         {
           "name": "computationOffset",
           "type": "u64"
-        },
-        {
-          "name": "ciphertextA",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "ciphertextB",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "pubKey",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
         },
         {
           "name": "nonce",

@@ -90,6 +90,18 @@ pub struct ComputeTripMatch<'info> {
     /// Match record to be updated in callback
     #[account(mut)]
     pub match_record: Account<'info, crate::state::MatchRecord>,
+    
+    /// Trip A - contains encrypted_data and public_key
+    #[account(
+        constraint = trip_a.is_active @ ErrorCode::TripNotActive,
+    )]
+    pub trip_a: Account<'info, crate::state::Trip>,
+    
+    /// Trip B - contains encrypted_data and public_key
+    #[account(
+        constraint = trip_b.is_active @ ErrorCode::TripNotActive,
+    )]
+    pub trip_b: Account<'info, crate::state::Trip>,
 }
 
 /// Callback after computation completes

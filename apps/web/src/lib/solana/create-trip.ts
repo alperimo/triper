@@ -9,7 +9,7 @@
  * - Trip metadata is public (created_at, is_active)
  */
 
-import { AnchorProvider, Program, web3 } from '@coral-xyz/anchor';
+import { AnchorProvider, Program, web3, BN } from '@coral-xyz/anchor';
 import type { Triper } from '../anchor/types';
 import {
   initializeEncryption,
@@ -80,16 +80,13 @@ export async function createTrip(
   const encrypted = encryptTripData(encryptionContext, tripData);
   
   // 5. Flatten ciphertext to bytes
-  // TODO: Properly serialize ciphertext (currently simplified)
-  const encryptedDataBytes = new Uint8Array(209); // Match circuit size
-  let offset = 0;
-  for (const chunk of encrypted.ciphertext) {
-    for (const value of chunk) {
-      if (offset < 209) {
-        encryptedDataBytes[offset++] = Number(value) & 0xff;
-      }
-    }
-  }
+  // cipher.encrypt() returns number[][] (array of field elements)
+  // We need to concatenate them into a single byte buffer
+  const encryptedDataBytes = Buffer.concat(
+    encrypted.ciphertext.map(field => Buffer.from(field))
+  );
+  
+  console.log(`Encrypted data size: ${encryptedDataBytes.length} bytes (${encrypted.ciphertext.length} field elements)`);
   
   // 6. Convert destination grid hash to bytes[32]
   const destinationHashBytes = new Uint8Array(32);
@@ -98,11 +95,15 @@ export async function createTrip(
   destinationHashBytes.set(hashData.slice(0, 32));
   
   // 7. Derive Trip PDA
+  // Updated to match current program: seeds = [b"trip", user.key().as_ref(), start_date.to_le_bytes().as_ref()]
+  const startDateBytes = Buffer.alloc(8);
+  startDateBytes.writeBigInt64LE(BigInt(Math.floor(startDate.getTime() / 1000)));
+  
   const [tripPDA] = web3.PublicKey.findProgramAddressSync(
     [
       Buffer.from('trip'),
       owner.toBuffer(),
-      Buffer.from(destinationHashBytes),
+      startDateBytes,
     ],
     program.programId
   );
@@ -114,21 +115,22 @@ export async function createTrip(
   console.log('  Waypoints:', waypoints.length);
   console.log('  Date Range:', startDate.toISOString(), '→', endDate.toISOString());
   console.log('  Interests:', interests.length);
+  console.log('  Encrypted data:', encryptedDataBytes.length, 'bytes');
   
   // 8. Submit transaction
-  // Note: Type definitions may be outdated. The actual program expects:
-  // create_trip(destination_grid_hash: [u8; 32], start_date: i64, end_date: i64, encrypted_data: Vec<u8>, public_key: [u8; 32])
-  const signature = await (program.methods as any)
+  // Current program signature: create_trip(destination_grid_hash: [u8; 32], start_date: i64, end_date: i64, encrypted_data: Vec<u8>, public_key: [u8; 32])
+  const signature = await program.methods
     .createTrip(
       Array.from(destinationHashBytes),
-      Math.floor(startDate.getTime() / 1000),
-      Math.floor(endDate.getTime() / 1000),
-      Array.from(encryptedDataBytes),
+      new BN(Math.floor(startDate.getTime() / 1000)),
+      new BN(Math.floor(endDate.getTime() / 1000)),
+      encryptedDataBytes,
       Array.from(encrypted.publicKey)
     )
     .accountsPartial({
       user: owner,
       trip: tripPDA,
+      systemProgram: web3.SystemProgram.programId,
     })
     .rpc({ commitment: 'confirmed' });
   
@@ -172,27 +174,37 @@ export async function deactivateTrip(
 
 /**
  * Fetch trip data from blockchain
- * Returns only PUBLIC metadata (route is NOT stored on-chain)
+ * Returns only PUBLIC metadata (encrypted_data is private)
  */
 export async function fetchTrip(
   program: Program<Triper>,
   tripPDA: web3.PublicKey
 ): Promise<{
   owner: web3.PublicKey;
-  routeHash: number[];
-  createdAt: number;
+  destinationGridHash: number[];
+  startDate: number;
+  endDate: number;
+  encryptedData: number[];
+  publicKey: number[];
   isActive: boolean;
-  computationCount: number;
+  matchCount: number;
+  createdAt: number;
+  bump: number;
 } | null> {
   try {
     const trip = await program.account.trip.fetch(tripPDA);
     
     return {
       owner: trip.owner,
-      routeHash: Array.from(trip.routeHash),
-      createdAt: trip.createdAt.toNumber(),
+      destinationGridHash: Array.from(trip.destinationGridHash),
+      startDate: trip.startDate.toNumber(),
+      endDate: trip.endDate.toNumber(),
+      encryptedData: Array.from(trip.encryptedData),
+      publicKey: Array.from(trip.publicKey),
       isActive: trip.isActive,
-      computationCount: trip.computationCount,
+      matchCount: trip.matchCount,
+      createdAt: trip.createdAt.toNumber(),
+      bump: trip.bump,
     };
   } catch (error) {
     console.error('Error fetching trip:', error);
