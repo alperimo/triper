@@ -368,21 +368,6 @@ describe("Arcium Trip Matching", () => {
     const mempoolAccount = getMempoolAccAddress(program.programId);
     const mxeAccount = getMXEAccAddress(program.programId);
     
-    // Get cluster and pool accounts (these are Arcium protocol constants)
-    const ARCIUM_FEE_POOL_ACCOUNT = new PublicKey("FeeP2YvjVZqBdJWYi7fJFQ4nGqMTq3Qb4cxPb99z2Yen");
-    const ARCIUM_CLOCK_ACCOUNT = new PublicKey("C1ock11111111111111111111111111111111111111");
-    
-    // For cluster account, we need to derive it from MXE
-    const mxeAccountData = await provider.connection.getAccountInfo(mxeAccount);
-    if (!mxeAccountData) {
-      throw new Error("MXE account not found");
-    }
-    const clusterBaseSeed = getArciumAccountBaseSeed("Cluster");
-    // Cluster account is derived from the MXE account pubkey
-    const clusterAccount = PublicKey.findProgramAddressSync(
-      [clusterBaseSeed, mxeAccount.toBuffer()],
-      arciumProgAddress
-    )[0];
 
     // Convert ciphertext from number[][] to Buffer
     // cipher.encrypt() returns field elements as number[][]
@@ -402,17 +387,19 @@ describe("Arcium Trip Matching", () => {
         new anchor.BN(deserializeLE(nonce).toString())
       )
       .accountsPartial({
-        payer: provider.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        arciumProgram: arciumProgAddress,
-        compDefAccount: compDefAccount,
-        executingPool: executingPool,
-        mempoolAccount: mempoolAccount,
-        computationAccount,
-        mxeAccount: mxeAccount,
-        clusterAccount: clusterAccount,
-        poolAccount: ARCIUM_FEE_POOL_ACCOUNT,
-        clockAccount: ARCIUM_CLOCK_ACCOUNT,
+        computationAccount: getComputationAccAddress(
+          program.programId,
+          computationOffset
+        ),
+        clusterAccount: arciumEnv.arciumClusterPubkey,
+        mxeAccount: getMXEAccAddress(program.programId),
+        mempoolAccount: getMempoolAccAddress(program.programId),
+        executingPool: getExecutingPoolAccAddress(program.programId),
+        compDefAccount: getCompDefAccAddress(
+          program.programId,
+          Buffer.from(getCompDefAccOffset("compute_trip_match")).readUInt32LE()
+        ),
+        matchRecord: matchRecordPda,
       })
       .signers([])
       .rpc();
