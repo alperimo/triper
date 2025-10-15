@@ -56,26 +56,103 @@ describe("Arcium Trip Matching", () => {
 
     console.log("\n🔧 Initializing compute_trip_match computation definition...");
     
-    try {
-      const initSig = await initComputeTripMatchCompDef(
-        program,
-        owner,
-        true, // uploadRawCircuit - upload the .arcis file
-        false  // offchainSource
-      );
-      console.log("✅ Computation definition initialized!");
-      console.log("   Transaction:", initSig);
-    } catch (error: any) {
-      if (error.message?.includes("already in use") || error.logs?.some((log: string) => log.includes("already in use"))) {
-        console.log("⚠️  Computation definition already initialized (this is okay)");
-      } else {
-        throw error;
+    // Check if comp def exists first
+    const baseSeedCompDefAcc = getArciumAccountBaseSeed(
+      "ComputationDefinitionAccount"
+    );
+    const offset = getCompDefAccOffset("compute_trip_match");
+    const compDefPDA = PublicKey.findProgramAddressSync(
+      [baseSeedCompDefAcc, program.programId.toBuffer(), offset],
+      getArciumProgAddress()
+    )[0];
+
+    const compDefAccount = await provider.connection.getAccountInfo(compDefPDA);
+    
+    if (compDefAccount) {
+      console.log("⚠️  Computation definition already exists");
+      console.log("   Ensuring circuit is uploaded and finalized...");
+      
+      // Upload circuit even if comp def exists
+      let rawCircuit: Buffer | undefined;
+      const possiblePaths = [
+        "build/compute_trip_match_localnet.arcis",
+        "build/compute_trip_match_testnet.arcis",
+        "build/compute_trip_match.arcis",
+      ];
+      
+      for (const path of possiblePaths) {
+        if (fs.existsSync(path)) {
+          console.log(`   Found circuit at ${path}`);
+          rawCircuit = fs.readFileSync(path);
+          break;
+        }
+      }
+      
+      if (rawCircuit) {
+        try {
+          await uploadCircuit(
+            provider as anchor.AnchorProvider,
+            "compute_trip_match",
+            program.programId,
+            rawCircuit,
+            true
+          );
+          console.log("✅ Circuit uploaded successfully!");
+        } catch (e: any) {
+          console.log("⚠️  Circuit already uploaded (this is okay):", e.message?.split('\n')[0]);
+        }
+      }
+      
+      // Finalize the comp def
+      console.log("   Finalizing computation definition...");
+      try {
+        const finalizeTx = await buildFinalizeCompDefTx(
+          provider as anchor.AnchorProvider,
+          Buffer.from(offset).readUInt32LE(),
+          program.programId
+        );
+
+        const latestBlockhash = await provider.connection.getLatestBlockhash();
+        finalizeTx.recentBlockhash = latestBlockhash.blockhash;
+        finalizeTx.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+
+        finalizeTx.sign(owner);
+
+        await provider.sendAndConfirm!(finalizeTx);
+        console.log("✅ Computation definition finalized!");
+      } catch (finalizeError: any) {
+        console.log("⚠️  Finalization info:", finalizeError.message?.split('\n')[0]);
+      }
+    } else {
+      try {
+        const initSig = await initComputeTripMatchCompDef(
+          program,
+          owner,
+          true, // uploadRawCircuit - upload the .arcis file
+          false  // offchainSource
+        );
+        console.log("✅ Computation definition initialized!");
+        console.log("   Transaction:", initSig);
+      } catch (error: any) {
+        if (error.message?.includes("already in use") || error.logs?.some((log: string) => log.includes("already in use"))) {
+          console.log("⚠️  Computation definition already initialized (this is okay)");
+        } else {
+          throw error;
+        }
       }
     }
   });
 
   it("Computes trip match with encrypted data", async () => {
     const owner = readKpJson(`${os.homedir()}/.config/solana/id.json`);
+    const tripOwnerB = anchor.web3.Keypair.generate(); // Second user
+
+    // Airdrop to second user
+    const airdropSig = await provider.connection.requestAirdrop(
+      tripOwnerB.publicKey,
+      2 * anchor.web3.LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdropSig);
 
     console.log("\n🔐 Testing encrypted trip matching...");
 
@@ -131,9 +208,11 @@ describe("Arcium Trip Matching", () => {
       BigInt(0), BigInt(0),
     ];
     
-    // Dates: June 1-15, 2025
-    const startDate = BigInt(Math.floor(new Date("2025-06-01").getTime() / 1000));
-    const endDate = BigInt(Math.floor(new Date("2025-06-15").getTime() / 1000));
+    // Dates: Use unique timestamps to avoid account conflicts on re-runs
+    // Adding randomness so trips are unique each test run
+    const dateOffset = Math.floor(Date.now() / 1000);
+    const startDate = BigInt(dateOffset);
+    const endDate = BigInt(dateOffset + 14 * 24 * 60 * 60); // 14 days later
     
     // Interests: hiking (0), photography (1), food (2) = true, rest false
     const interestsA = [
@@ -179,6 +258,89 @@ describe("Arcium Trip Matching", () => {
     const ciphertextB = cipher.encrypt(tripBData, nonce);
 
     console.log("Trip data encrypted with nonce:", Buffer.from(nonce).toString("hex"));
+    console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA) ? `array of ${ciphertextA.length}` : 'not array');
+    console.log("Ciphertext A[0] type:", typeof ciphertextA[0], ciphertextA[0] instanceof Uint8Array ? 'Uint8Array' : Array.isArray(ciphertextA[0]) ? 'Array' : 'other');
+    if (ciphertextA[0]) {
+      console.log("Ciphertext A[0] length:", ciphertextA[0].length);
+    }
+
+    // Step 1: Create Trip A
+    console.log("\n📍 Creating Trip A (San Francisco -> LA)...");
+    const [tripAPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("trip"),
+        owner.publicKey.toBuffer(),
+        Buffer.from(new anchor.BN(startDate.toString()).toArrayLike(Buffer, "le", 8)),
+      ],
+      program.programId
+    );
+
+    const destinationHashA = Buffer.from(new Array(32).fill(1)); // Simple hash for SF-LA area
+    await program.methods
+      .createTrip(
+        Array.from(destinationHashA),
+        new anchor.BN(startDate.toString()),
+        new anchor.BN(endDate.toString()),
+        Buffer.from(ciphertextA[0]), // Use encrypted data as Buffer
+        Array.from(publicKey)
+      )
+      .accountsPartial({
+        trip: tripAPda,
+        user: owner.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("✅ Trip A created:", tripAPda.toBase58());
+
+    // Step 2: Create Trip B
+    console.log("\n📍 Creating Trip B (San Francisco -> LA, different user)...");
+    const [tripBPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("trip"),
+        tripOwnerB.publicKey.toBuffer(),
+        Buffer.from(new anchor.BN(startDate.toString()).toArrayLike(Buffer, "le", 8)),
+      ],
+      program.programId
+    );
+
+    const destinationHashB = Buffer.from(new Array(32).fill(1)); // Same area
+    await program.methods
+      .createTrip(
+        Array.from(destinationHashB),
+        new anchor.BN(startDate.toString()),
+        new anchor.BN(endDate.toString()),
+        Buffer.from(ciphertextB[0]), // Use encrypted data as Buffer
+        Array.from(publicKey)
+      )
+      .accountsPartial({
+        trip: tripBPda,
+        user: tripOwnerB.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([tripOwnerB])
+      .rpc();
+    console.log("✅ Trip B created:", tripBPda.toBase58());
+
+    // Step 3: Initiate Match (creates MatchRecord)
+    console.log("\n🤝 Initiating match between trips...");
+    const [matchRecordPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("match"), tripAPda.toBuffer(), tripBPda.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .initiateMatch()
+      .accountsPartial({
+        payer: owner.publicKey,
+        tripA: tripAPda,
+        tripB: tripBPda,
+        matchRecord: matchRecordPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("✅ Match record created:", matchRecordPda.toBase58());
 
     // Set up event listener for the callback
     const matchEventPromise = awaitEvent("matchComputedEvent");
@@ -194,27 +356,66 @@ describe("Arcium Trip Matching", () => {
     );
     console.log("  Computation Account:", computationAccount.toString());
 
+    // Derive other required Arcium accounts
+    const arciumProgAddress = getArciumProgAddress();
+    const baseSeedCompDefAcc = getArciumAccountBaseSeed("ComputationDefinitionAccount");
+    const compDefOffset = getCompDefAccOffset("compute_trip_match");
+    const compDefAccount = PublicKey.findProgramAddressSync(
+      [baseSeedCompDefAcc, program.programId.toBuffer(), compDefOffset],
+      arciumProgAddress
+    )[0];
+    const executingPool = getExecutingPoolAccAddress(program.programId);
+    const mempoolAccount = getMempoolAccAddress(program.programId);
+    const mxeAccount = getMXEAccAddress(program.programId);
+    
+    // Get cluster and pool accounts (these are Arcium protocol constants)
+    const ARCIUM_FEE_POOL_ACCOUNT = new PublicKey("FeeP2YvjVZqBdJWYi7fJFQ4nGqMTq3Qb4cxPb99z2Yen");
+    const ARCIUM_CLOCK_ACCOUNT = new PublicKey("C1ock11111111111111111111111111111111111111");
+    
+    // For cluster account, we need to derive it from MXE
+    const mxeAccountData = await provider.connection.getAccountInfo(mxeAccount);
+    if (!mxeAccountData) {
+      throw new Error("MXE account not found");
+    }
+    const clusterBaseSeed = getArciumAccountBaseSeed("Cluster");
+    // Cluster account is derived from the MXE account pubkey
+    const clusterAccount = PublicKey.findProgramAddressSync(
+      [clusterBaseSeed, mxeAccount.toBuffer()],
+      arciumProgAddress
+    )[0];
+
+    // Convert ciphertext from number[][] to Buffer
+    // cipher.encrypt() returns field elements as number[][]
+    // We need to convert to bytes for the Solana instruction
+    console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA), ciphertextA.length);
+    console.log("Ciphertext A[0] length:", ciphertextA[0]?.length);
+    
+    const ciphertextABuffer = Buffer.from(ciphertextA[0]);
+    const ciphertextBBuffer = Buffer.from(ciphertextB[0]);
+
     const queueSig = await program.methods
       .computeTripMatch(
         computationOffset,
-        Array.from(ciphertextA[0]),
-        Array.from(ciphertextB[0]),
+        ciphertextABuffer,
+        ciphertextBBuffer,
         Array.from(publicKey),
         new anchor.BN(deserializeLE(nonce).toString())
       )
       .accountsPartial({
+        payer: provider.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        arciumProgram: arciumProgAddress,
+        compDefAccount: compDefAccount,
+        executingPool: executingPool,
+        mempoolAccount: mempoolAccount,
         computationAccount,
-        clusterAccount: arciumEnv.arciumClusterPubkey,
-        mxeAccount: getMXEAccAddress(program.programId),
-        mempoolAccount: getMempoolAccAddress(program.programId),
-        executingPool: getExecutingPoolAccAddress(program.programId),
-        compDefAccount: getCompDefAccAddress(
-          program.programId,
-          Buffer.from(getCompDefAccOffset("compute_trip_match")).readUInt32LE()
-        ),
+        mxeAccount: mxeAccount,
+        clusterAccount: clusterAccount,
+        poolAccount: ARCIUM_FEE_POOL_ACCOUNT,
+        clockAccount: ARCIUM_CLOCK_ACCOUNT,
       })
-      .signers([owner])
-      .rpc({ skipPreflight: true, commitment: "confirmed" });
+      .signers([])
+      .rpc();
 
     console.log("✅ Computation queued!");
     console.log("   Transaction:", queueSig);
@@ -223,14 +424,19 @@ describe("Arcium Trip Matching", () => {
     console.log("   (This typically takes 10-30 seconds)");
 
     // Wait for the computation to finalize
-    const finalizeSig = await awaitComputationFinalization(
-      provider as anchor.AnchorProvider,
-      computationOffset,
-      program.programId,
-      "confirmed"
-    );
-    console.log("✅ Computation finalized!");
-    console.log("   Transaction:", finalizeSig);
+    try {
+      const finalizeSig = await awaitComputationFinalization(
+        provider as anchor.AnchorProvider,
+        computationOffset,
+        program.programId,
+        "confirmed"
+      );
+      console.log("✅ Computation finalized!");
+      console.log("   Transaction:", finalizeSig);
+    } catch (error: any) {
+      console.error("Error during computation finalization:", error.message);
+      throw error;
+    }
 
     // Wait for the callback event
     const matchEvent = await matchEventPromise;
@@ -316,15 +522,36 @@ describe("Arcium Trip Matching", () => {
         throw new Error("Circuit file not found. Please build with 'arcium build' first.");
       }
 
-      await uploadCircuit(
-        provider as anchor.AnchorProvider,
-        "compute_trip_match",
-        program.programId,
-        rawCircuit,
-        true
-      );
+      try {
+        await uploadCircuit(
+          provider as anchor.AnchorProvider,
+          "compute_trip_match",
+          program.programId,
+          rawCircuit,
+          true
+        );
+        console.log("✅ Circuit uploaded successfully!");
+      } catch (uploadError: any) {
+        console.log("⚠️  Circuit upload completed (may already exist):", uploadError.message);
+      }
       
-      console.log("✅ Circuit uploaded successfully!");
+      // Always finalize after upload attempt
+      console.log("Finalizing computation definition...");
+      
+      const finalizeTx = await buildFinalizeCompDefTx(
+        provider as anchor.AnchorProvider,
+        Buffer.from(offset).readUInt32LE(),
+        program.programId
+      );
+
+      const latestBlockhash = await provider.connection.getLatestBlockhash();
+      finalizeTx.recentBlockhash = latestBlockhash.blockhash;
+      finalizeTx.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+
+      finalizeTx.sign(owner);
+
+      await provider.sendAndConfirm!(finalizeTx);
+      console.log("✅ Computation definition finalized!");
     } else if (!offchainSource) {
       console.log("Finalizing computation definition...");
       
