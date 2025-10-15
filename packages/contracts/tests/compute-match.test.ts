@@ -355,20 +355,22 @@ describe("Arcium Trip Matching", () => {
       computationOffset
     );
     console.log("  Computation Account:", computationAccount.toString());
-    // Convert ciphertext from number[][] to Buffer
-    // cipher.encrypt() returns field elements as number[][]
-    // We need to convert to bytes for the Solana instruction
+    
+    // Convert ciphertext from number[][] to the format expected by Solana
+    // cipher.encrypt() returns an array of encrypted field elements
+    // Each element is a number array that needs to be converted using Array.from()
+    // Following the hello-world example pattern
     console.log("Ciphertext A structure:", typeof ciphertextA, Array.isArray(ciphertextA), ciphertextA.length);
     console.log("Ciphertext A[0] length:", ciphertextA[0]?.length);
     
-    const ciphertextABuffer = Buffer.from(ciphertextA[0]);
-    const ciphertextBBuffer = Buffer.from(ciphertextB[0]);
+    const ciphertextAFormatted = ciphertextA.map(field => Array.from(field));
+    const ciphertextBFormatted = ciphertextB.map(field => Array.from(field));
 
     const queueSig = await program.methods
       .computeTripMatch(
         computationOffset,
-        ciphertextABuffer,
-        ciphertextBBuffer,
+        ciphertextAFormatted,
+        ciphertextBFormatted,
         Array.from(publicKey),
         new anchor.BN(deserializeLE(nonce).toString())
       )

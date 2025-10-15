@@ -65,23 +65,38 @@ pub mod triper {
     }
 
     /// Queue a confidential trip matching computation
-    /// Encrypted data is sent to Arcium MPC network
+    /// Encrypted data is sent to Arcium MPC network  
     pub fn compute_trip_match(
         ctx: Context<ComputeTripMatch>,
         computation_offset: u64,
-        ciphertext_a: [u8; 32],
-        ciphertext_b: [u8; 32],
+        ciphertext_a: Vec<[u8; 32]>,
+        ciphertext_b: Vec<[u8; 32]>,
         pub_key: [u8; 32],
         nonce: u128,
     ) -> Result<()> {
         ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         
-        let args = vec![
+        // Build arguments similar to hello-world example
+        // For encrypted data, we pass:
+        // 1. Argument::ArcisPubkey(pub_key) - ephemeral public key
+        // 2. Argument::PlaintextU128(nonce) - encryption nonce
+        // 3. Argument::EncryptedU8 for each encrypted field element from ciphertext_a
+        // 4. Argument::EncryptedU8 for each encrypted field element from ciphertext_b
+        
+        let mut args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
-            Argument::EncryptedU8(ciphertext_a),
-            Argument::EncryptedU8(ciphertext_b),
         ];
+        
+        // Add all encrypted field elements from trip A
+        for encrypted_field in ciphertext_a.iter() {
+            args.push(Argument::EncryptedU8(*encrypted_field));
+        }
+        
+        // Add all encrypted field elements from trip B
+        for encrypted_field in ciphertext_b.iter() {
+            args.push(Argument::EncryptedU8(*encrypted_field));
+        }
 
         queue_computation(
             ctx.accounts,
@@ -92,6 +107,8 @@ pub mod triper {
         )?;
         
         msg!("Queued MPC computation for match record: {}", ctx.accounts.match_record.key());
+        msg!("Trip A: {} encrypted fields", ciphertext_a.len());
+        msg!("Trip B: {} encrypted fields", ciphertext_b.len());
         
         Ok(())
     }
