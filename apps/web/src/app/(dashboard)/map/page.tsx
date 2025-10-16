@@ -9,6 +9,7 @@ import { useUserStore } from '@/lib/store/user';
 import { showSuccess, showError } from '@/lib/toast';
 import { CheckIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getRoute, type RoutingProfile, formatDistance, formatDuration, getAvailableProfiles } from '@/lib/services/routing';
+import { reverseGeocode } from '@/lib/services/geocoding';
 
 export default function MapPage() {
   const { createTrip, loading } = useTrips();
@@ -42,6 +43,26 @@ export default function MapPage() {
 
   const handleRequestAddWaypoint = useCallback(() => {
   }, []);
+
+  // Handle map click to add waypoint
+  const handleMapClick = useCallback(async (event: { lng: number; lat: number; lngLat: [number, number] }) => {
+    // Don't add waypoint if there's already a pending pin
+    if (pendingPin) return;
+    
+    const { lng, lat } = event;
+    
+    // Use geocoding service to get location information
+    const location = await reverseGeocode(lat, lng);
+    
+    setPendingPin({
+      name: location.name,
+      address: location.address,
+      lat: location.lat,
+      lng: location.lng,
+    });
+    
+    navigateToLocation(lat, lng);
+  }, [pendingPin, navigateToLocation]);
 
   // Handle location selection from search (map search bar OR panel inline search)
   const handleSearchSelect = useCallback((location: { lat: number; lng: number; name: string; address: string }) => {
@@ -351,12 +372,22 @@ export default function MapPage() {
         </div>
       )}
 
+      {/* Click-to-add hint - Show at bottom center when no pending pin */}
+      {!pendingPin && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm shadow-lg">
+            💡 Click anywhere on the map to add a location
+          </div>
+        </div>
+      )}
+
       {/* Map View */}
       <MapView 
         height="100vh"
         showControls={true}
         initialCenter={mapCenter || [-122.45, 37.78]}
         initialZoom={mapCenter ? 15 : 10}
+        onClick={handleMapClick}
         // Pass route lines connecting waypoints
         routeLines={routeLines}
         // Pass waypoints and pending pin as markers
