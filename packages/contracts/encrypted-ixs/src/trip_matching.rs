@@ -39,17 +39,6 @@ mod circuits {
         interests: [bool; MAX_INTERESTS],
     }
     
-    /// DEPRECATED: Old TripData structure (kept for reference)
-    /// Now split into WaypointData (in Trip) + UserInterests (in UserProfile)
-    /// Dates are now PUBLIC parameters (not encrypted)
-    pub struct TripData {
-        waypoints: [u64; MAX_WAYPOINTS],
-        waypoint_count: u8,
-        start_date: i64,
-        end_date: i64,
-        interests: [bool; MAX_INTERESTS],
-    }
-    
     /// Compute route similarity using H3 cell Jaccard index
     /// Returns percentage similarity (0-100)
     /// 
