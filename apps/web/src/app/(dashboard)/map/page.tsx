@@ -69,35 +69,36 @@ export default function MapPage() {
     setPendingPin(location);
     navigateToLocation(location.lat, location.lng);
     setShowSearchForWaypoint(false); // Hide search after selection
-    
-    // Immediately add as pending waypoint to show in route planner
-    const pendingWaypoint: Waypoint = {
-      id: `pending-${Date.now()}`,
-      ...location,
-    };
-    setWaypoints(prev => [...prev, pendingWaypoint]);
-    setIsPanelOpen(true); // Show panel with the pending waypoint
+    setIsPanelOpen(true); // Show panel
     setIsPanelCollapsed(false); // Ensure mobile panel is expanded
     setIsDesktopPanelCollapsed(false); // Ensure desktop panel is visible
   }, [navigateToLocation]);
 
-  // Confirm pin placement - convert pending to confirmed
+  // Confirm pin placement - add waypoint to list
   const handleConfirmPin = useCallback(() => {
     if (!pendingPin) return;
     
-    // Just clear the pending state - waypoint is already in the list
+    // Add the pending pin as a confirmed waypoint
+    const newWaypoint: Waypoint = {
+      id: `waypoint-${Date.now()}`,
+      name: pendingPin.name,
+      address: pendingPin.address,
+      lat: pendingPin.lat,
+      lng: pendingPin.lng,
+    };
+    
+    setWaypoints(prev => [...prev, newWaypoint]);
     setPendingPin(null);
+    setIsPanelOpen(true); // Ensure panel is visible
+    setIsPanelCollapsed(false);
+    setIsDesktopPanelCollapsed(false);
   }, [pendingPin]);
 
   // Cancel pin placement - remove the pending waypoint
   const handleCancelPin = useCallback(() => {
-    if (pendingPin) {
-      // Remove the last waypoint (the pending one)
-      setWaypoints(prev => prev.slice(0, -1));
-    }
     setPendingPin(null);
     setShowSearchForWaypoint(false);
-  }, [pendingPin]);
+  }, []);
 
   // Handle waypoint focus
   const handleWaypointFocus = useCallback((waypoint: Waypoint) => {
@@ -392,11 +393,11 @@ export default function MapPage() {
         routeLines={routeLines}
         // Pass waypoints and pending pin as markers
         markers={[
-          // Pending pin (yellow/orange)
+          // Pending pin (yellow/orange with next waypoint number)
           ...(pendingPin ? [{
             lng: pendingPin.lng,
             lat: pendingPin.lat,
-            label: '📍',
+            label: `${waypoints.length + 1}`, // Show what number it will be
             color: '#f59e0b',
           }] : []),
           // Waypoints (green with numbers)
