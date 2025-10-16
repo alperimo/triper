@@ -163,7 +163,7 @@ export default function MapPage() {
       return [{
         coordinates: routeCoordinates,
         color: routingProfile === 'car' ? '#3b82f6' : routingProfile === 'foot' ? '#10b981' : routingProfile === 'bike' ? '#f59e0b' : '#6b8e23',
-        width: 4,
+        width: 6,
       }];
     }
     
