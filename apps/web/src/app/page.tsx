@@ -5,6 +5,7 @@ import { useUserStore } from '@/lib/store/user';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Home() {
   const { isConnected } = useUserStore();
@@ -40,10 +41,13 @@ export default function Home() {
         <div className="flex justify-center">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-3xl opacity-50" />
-            <svg className="w-20 h-20 relative text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <Image 
+              src="/logo.svg" 
+              alt="Triper Logo" 
+              width={80} 
+              height={80} 
+              className="relative"
+            />
           </div>
         </div>
         
