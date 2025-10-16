@@ -97,3 +97,29 @@ pub struct MatchComputedEvent {
     pub total_score: u8,
 }
 
+/// Emitted when a user profile is created
+#[event]
+pub struct UserProfileCreated {
+    /// UserProfile PDA
+    pub user_profile: Pubkey,
+    
+    /// Profile owner
+    pub owner: Pubkey,
+    
+    /// Creation timestamp
+    pub created_at: i64,
+}
+
+/// Emitted when a user profile is updated
+#[event]
+pub struct UserProfileUpdated {
+    /// UserProfile PDA
+    pub user_profile: Pubkey,
+    
+    /// Profile owner
+    pub owner: Pubkey,
+    
+    /// Update timestamp
+    pub updated_at: i64,
+}
+

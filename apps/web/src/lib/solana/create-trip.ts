@@ -25,22 +25,24 @@ import type { Waypoint, InterestTag } from '@/types';
  * What's stored on-chain:
  * - owner: User's wallet address (PUBLIC)
  * - destination_grid_hash: H3 level 6 cell (PUBLIC - for pre-filtering)
- * - encrypted_data: Full TripData encrypted (PRIVATE)
+ * - start_date, end_date: Unix timestamps (PUBLIC - for date filtering)
+ * - encrypted_waypoints: WaypointData encrypted (PRIVATE)
  * - created_at: Timestamp (PUBLIC)
  * - is_active: Boolean flag (PUBLIC)
  * 
- * What's in encrypted_data (PRIVATE):
+ * What's in encrypted_waypoints (PRIVATE):
  * - waypoints: Array of H3 cells (up to 20)
- * - start_date, end_date: Unix timestamps
+ * - waypoint_count: u8
+ * 
+ * What's in UserProfile.encrypted_data (PRIVATE - separate account):
  * - interests: Boolean array[32]
  * 
  * @param program - Triper program instance
  * @param provider - Anchor provider
  * @param waypoints - Route waypoints (will be converted to H3)
  * @param destination - Final destination (used for public hash)
- * @param startDate - Trip start date
- * @param endDate - Trip end date
- * @param interests - Interest tags (0-31)
+ * @param startDate - Trip start date (stored PUBLIC for filtering)
+ * @param endDate - Trip end date (stored PUBLIC for filtering)
  * @returns Transaction signature and trip PDA
  */
 export async function createTrip(
@@ -49,8 +51,7 @@ export async function createTrip(
   waypoints: Waypoint[],
   destination: Waypoint,
   startDate: Date,
-  endDate: Date,
-  interests: InterestTag[]
+  endDate: Date
 ): Promise<{
   signature: string;
   tripPDA: web3.PublicKey;
@@ -71,9 +72,6 @@ export async function createTrip(
   // 3. Prepare TripData
   const tripData: TripData = {
     waypoints,
-    startDate,
-    endDate,
-    interests,
   };
   
   // 4. Encrypt trip data
@@ -114,11 +112,9 @@ export async function createTrip(
   console.log('  Destination Hash:', destinationGridHash);
   console.log('  Waypoints:', waypoints.length);
   console.log('  Date Range:', startDate.toISOString(), '→', endDate.toISOString());
-  console.log('  Interests:', interests.length);
-  console.log('  Encrypted data:', encryptedDataBytes.length, 'bytes');
+  console.log('  Encrypted waypoints:', encryptedDataBytes.length, 'bytes');
   
   // 8. Submit transaction
-  // Current program signature: create_trip(destination_grid_hash: [u8; 32], start_date: i64, end_date: i64, encrypted_data: Vec<u8>, public_key: [u8; 32])
   const signature = await program.methods
     .createTrip(
       Array.from(destinationHashBytes),

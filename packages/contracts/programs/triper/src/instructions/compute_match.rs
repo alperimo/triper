@@ -91,17 +91,31 @@ pub struct ComputeTripMatch<'info> {
     #[account(mut)]
     pub match_record: Account<'info, crate::state::MatchRecord>,
     
-    /// Trip A - contains encrypted_data and public_key
+    /// Trip A - contains encrypted_waypoints and public_key
     #[account(
         constraint = trip_a.is_active @ ErrorCode::TripNotActive,
     )]
     pub trip_a: Account<'info, crate::state::Trip>,
     
-    /// Trip B - contains encrypted_data and public_key
+    /// Trip B - contains encrypted_waypoints and public_key
     #[account(
         constraint = trip_b.is_active @ ErrorCode::TripNotActive,
     )]
     pub trip_b: Account<'info, crate::state::Trip>,
+    
+    /// UserProfile for Trip A owner - contains encrypted interests
+    #[account(
+        constraint = user_profile_a.owner == trip_a.owner @ ErrorCode::UnauthorizedAccess,
+        constraint = user_profile_a.is_active @ ErrorCode::UserProfileNotActive,
+    )]
+    pub user_profile_a: Account<'info, crate::state::UserProfile>,
+    
+    /// UserProfile for Trip B owner - contains encrypted interests
+    #[account(
+        constraint = user_profile_b.owner == trip_b.owner @ ErrorCode::UnauthorizedAccess,
+        constraint = user_profile_b.is_active @ ErrorCode::UserProfileNotActive,
+    )]
+    pub user_profile_b: Account<'info, crate::state::UserProfile>,
 }
 
 /// Callback after computation completes

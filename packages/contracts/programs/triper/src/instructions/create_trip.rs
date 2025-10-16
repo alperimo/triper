@@ -30,11 +30,11 @@ pub fn create_trip_handler(
     destination_grid_hash: [u8; 32],
     start_date: i64,
     end_date: i64,
-    encrypted_data: Vec<u8>,
+    encrypted_waypoints: Vec<u8>,
     public_key: [u8; 32],
 ) -> Result<()> {
     require!(
-        encrypted_data.len() <= 2048,
+        encrypted_waypoints.len() <= 800,
         ErrorCode::EncryptedDataTooLarge
     );
     
@@ -49,7 +49,7 @@ pub fn create_trip_handler(
     trip.destination_grid_hash = destination_grid_hash;
     trip.start_date = start_date;
     trip.end_date = end_date;
-    trip.encrypted_data = encrypted_data;
+    trip.encrypted_waypoints = encrypted_waypoints;
     trip.public_key = public_key;
     trip.is_active = true;
     trip.match_count = 0;
@@ -59,7 +59,7 @@ pub fn create_trip_handler(
     msg!("Trip created: {}", trip.key());
     msg!("Destination: {:?}", destination_grid_hash);
     msg!("Dates: {} to {}", start_date, end_date);
-    msg!("Encrypted data size: {} bytes", trip.encrypted_data.len());
+    msg!("Encrypted waypoints size: {} bytes", trip.encrypted_waypoints.len());
     
     // Emit event for off-chain indexing
     emit!(TripCreated {

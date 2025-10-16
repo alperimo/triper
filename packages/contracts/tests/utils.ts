@@ -100,3 +100,27 @@ export function createVariantTripData(startDateOffset: number = 1000): {
     interests,
   };
 }
+
+/**
+ * Helper to create sample user profile data
+ * Returns interests and optional display name/bio
+ */
+export function createSampleUserData(variant: 'userA' | 'userB' = 'userA'): {
+  interests: InterestTag[];
+  displayName?: string;
+  bio?: string;
+} {
+  if (variant === 'userA') {
+    return {
+      interests: [0, 1, 2] as InterestTag[], // HIKING, PHOTOGRAPHY, FOOD
+      displayName: "Adventure Seeker",
+      bio: "Love exploring new places and trying local cuisine",
+    };
+  } else {
+    return {
+      interests: [0, 1] as InterestTag[], // HIKING, PHOTOGRAPHY (no food)
+      displayName: "Nature Photographer",
+      bio: "Passionate about capturing landscapes",
+    };
+  }
+}

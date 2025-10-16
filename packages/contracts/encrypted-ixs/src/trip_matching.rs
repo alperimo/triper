@@ -22,20 +22,31 @@ mod circuits {
     // Maximum interest tags
     const MAX_INTERESTS: usize = 32;
     
-    /// Trip data structure matching what's encrypted in Trip.encrypted_data
-    /// This is what the client encrypts and stores on-chain
-    pub struct TripData {
+    /// Waypoint data structure - encrypted and stored in Trip.encrypted_waypoints
+    /// Contains ONLY the route information
+    pub struct WaypointData {
         // H3 cells at level 7 (~5km² resolution)
         // Each waypoint is represented as a u64 H3 index
         waypoints: [u64; MAX_WAYPOINTS],
         waypoint_count: u8,
-        
-        // Trip timing (Unix timestamps)
-        start_date: i64,
-        end_date: i64,
-        
+    }
+    
+    /// User interest data structure - encrypted and stored in UserProfile.encrypted_data
+    /// Contains ONLY the user preferences
+    pub struct UserInterests {
         // Interest tags as boolean flags (up to 32 categories)
         // interests[0] = hiking, interests[1] = food, etc.
+        interests: [bool; MAX_INTERESTS],
+    }
+    
+    /// DEPRECATED: Old TripData structure (kept for reference)
+    /// Now split into WaypointData (in Trip) + UserInterests (in UserProfile)
+    /// Dates are now PUBLIC parameters (not encrypted)
+    pub struct TripData {
+        waypoints: [u64; MAX_WAYPOINTS],
+        waypoint_count: u8,
+        start_date: i64,
+        end_date: i64,
         interests: [bool; MAX_INTERESTS],
     }
     
@@ -154,39 +165,52 @@ mod circuits {
     
     /// Main encrypted instruction: compute trip match score
     /// This runs on Arcium's MPC network - data never decrypted
+    /// - Waypoint data (encrypted) from Trip.encrypted_waypoints
+    /// - Interest data (encrypted) from UserProfile.encrypted_data
+    /// - Date data (PUBLIC) passed as plaintext parameters
     ///
-    /// Takes two encrypted trip datasets and computes compatibility scores:
+    /// Computes compatibility scores:
     /// - Route similarity (H3 cell Jaccard for privacy)
-    /// - Date overlap
+    /// - Date overlap (using public dates for efficient pre-filtering)
     /// - Interest alignment
     ///
     /// Returns (route_score, date_score, interest_score, total_score) all 0-100
     #[instruction]
     pub fn compute_trip_match(
-        trip_a_ctxt: Enc<Shared, TripData>,
-        trip_b_ctxt: Enc<Shared, TripData>,
+        waypoints_a_ctxt: Enc<Shared, WaypointData>,
+        waypoints_b_ctxt: Enc<Shared, WaypointData>,
+        interests_a_ctxt: Enc<Shared, UserInterests>,
+        interests_b_ctxt: Enc<Shared, UserInterests>,
+        start_date_a: i64,
+        end_date_a: i64,
+        start_date_b: i64,
+        end_date_b: i64,
     ) -> (u8, u8, u8, u8) {
-        let trip_a = trip_a_ctxt.to_arcis();
-        let trip_b = trip_b_ctxt.to_arcis();
+        let waypoints_a = waypoints_a_ctxt.to_arcis();
+        let waypoints_b = waypoints_b_ctxt.to_arcis();
+        let interests_a = interests_a_ctxt.to_arcis();
+        let interests_b = interests_b_ctxt.to_arcis();
         
-        // All computations happen in MPC - fully encrypted!
+        // Compute route similarity (encrypted waypoints)
         let route_score = compute_route_similarity(
-            &trip_a.waypoints,
-            trip_a.waypoint_count,
-            &trip_b.waypoints,
-            trip_b.waypoint_count
+            &waypoints_a.waypoints,
+            waypoints_a.waypoint_count,
+            &waypoints_b.waypoints,
+            waypoints_b.waypoint_count
         );
         
+        // Compute date overlap (using PUBLIC dates - no encryption needed)
         let date_score = compute_date_overlap(
-            trip_a.start_date,
-            trip_a.end_date,
-            trip_b.start_date,
-            trip_b.end_date
+            start_date_a,
+            end_date_a,
+            start_date_b,
+            end_date_b
         );
         
+        // Compute interest similarity (encrypted interests)
         let interest_score = compute_interest_similarity(
-            &trip_a.interests,
-            &trip_b.interests
+            &interests_a.interests,
+            &interests_b.interests
         );
         
         // Weighted average: 40% route, 35% dates, 25% interests
@@ -197,7 +221,7 @@ mod circuits {
         ) / 100;
         
         // Return all scores revealed (not encrypted)
-        // The individual trip data remains encrypted - only scores are revealed
+        // The individual trip/user data remains encrypted - only scores are revealed
         (
             route_score.reveal(),
             date_score.reveal(),

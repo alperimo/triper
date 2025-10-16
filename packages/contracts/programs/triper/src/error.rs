@@ -11,6 +11,12 @@ pub enum ErrorCode {
     #[msg("Trip is not active")]
     TripNotActive,
     
+    #[msg("UserProfile is not active")]
+    UserProfileNotActive,
+    
+    #[msg("User not authorized to access this resource")]
+    UnauthorizedAccess,
+    
     #[msg("Invalid MXE account reference")]
     InvalidMxeAccount,
     

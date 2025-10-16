@@ -16,7 +16,9 @@ import {
   getMempoolAccAddress,
   getCompDefAccAddress,
   getExecutingPoolAccAddress,
-  getComputationAccAddress
+  getComputationAccAddress,
+  x25519,
+  RescueCipher,
 } from "@arcium-hq/client";
 import * as fs from "fs";
 import * as os from "os";
@@ -25,8 +27,10 @@ import {
   getMXEPublicKeyWithRetry,
   createSampleTripData,
   createVariantTripData,
+  createSampleUserData
 } from "./utils";
 import { createTrip } from "../../../apps/web/src/lib/solana/create-trip";
+import { createOrUpdateUserProfile } from "../../../apps/web/src/lib/solana/user-actions";
 
 describe("Arcium Trip Matching", () => {
   // Configure the client to use the local cluster
@@ -169,8 +173,67 @@ describe("Arcium Trip Matching", () => {
     // Create trip data using helpers
     const tripAData = createSampleTripData();
     const tripBData = createVariantTripData();
+    
+    // Create user profile data for both users
+    const userAData = createSampleUserData('userA');
+    const userBData = createSampleUserData('userB');
 
-    // Step 1: Create Trip A
+    // Create UserProfile for User A using the client-side function
+    console.log("\n👤 Creating UserProfile for User A...");
+    console.log("   Interests:", userAData.interests);
+    
+    const privateKeyA = x25519.utils.randomPrivateKey();
+    const publicKeyA = x25519.getPublicKey(privateKeyA);
+    const sharedSecretA = x25519.getSharedSecret(privateKeyA, mxePublicKey);
+    const cipherA = new RescueCipher(sharedSecretA);
+    
+    const userProfileAResult = await createOrUpdateUserProfile(
+      program,
+      provider as anchor.AnchorProvider,
+      cipherA,
+      publicKeyA,
+      userAData.interests,
+      userAData.displayName,
+      userAData.bio
+    );
+    console.log("✅ UserProfile A created:", userProfileAResult.userProfilePDA.toBase58());
+
+    // Switch wallet to User B for their profile and trip
+    const originalWallet = (provider as any).wallet;
+    (provider as any).wallet = {
+      publicKey: tripOwnerB.publicKey,
+      signTransaction: async (tx: any) => {
+        tx.partialSign(tripOwnerB);
+        return tx;
+      },
+      signAllTransactions: async (txs: any[]) => {
+        txs.forEach(tx => tx.partialSign(tripOwnerB));
+        return txs;
+      },
+    };
+
+    // Create UserProfile for User B using the client-side function
+    console.log("\n👤 Creating UserProfile for User B...");
+    console.log("   Interests:", userBData.interests);
+    
+    const privateKeyB = x25519.utils.randomPrivateKey();
+    const publicKeyB = x25519.getPublicKey(privateKeyB);
+    const sharedSecretB = x25519.getSharedSecret(privateKeyB, mxePublicKey);
+    const cipherB = new RescueCipher(sharedSecretB);
+    
+    const userProfileBResult = await createOrUpdateUserProfile(
+      program,
+      provider as anchor.AnchorProvider,
+      cipherB,
+      publicKeyB,
+      userBData.interests,
+      userBData.displayName,
+      userBData.bio
+    );
+    console.log("✅ UserProfile B created:", userProfileBResult.userProfilePDA.toBase58());
+
+    // Step 1: Create Trip A (restore wallet to User A first)
+    (provider as any).wallet = originalWallet;
     console.log("\n📍 Creating Trip A (San Francisco -> LA)...");
     const tripAResult = await createTrip(
       program,
@@ -178,16 +241,12 @@ describe("Arcium Trip Matching", () => {
       tripAData.waypoints,
       tripAData.destination,
       tripAData.startDate,
-      tripAData.endDate,
-      tripAData.interests
+      tripAData.endDate
     );
     console.log("✅ Trip A created:", tripAResult.tripPDA.toBase58());
 
-    // Step 2: Create Trip B
+    // Step 2: Create Trip B (switch back to User B)
     console.log("\n📍 Creating Trip B (San Francisco -> LA, different user)...");
-    
-    // Change provider wallet to tripOwnerB temporarily
-    const originalWallet = (provider as any).wallet;
     (provider as any).wallet = {
       publicKey: tripOwnerB.publicKey,
       signTransaction: async (tx: any) => {
@@ -206,8 +265,7 @@ describe("Arcium Trip Matching", () => {
       tripBData.waypoints,
       tripBData.destination,
       tripBData.startDate,
-      tripBData.endDate,
-      tripBData.interests
+      tripBData.endDate
     );
     console.log("✅ Trip B created:", tripBResult.tripPDA.toBase58());
     

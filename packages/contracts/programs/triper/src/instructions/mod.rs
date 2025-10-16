@@ -1,3 +1,5 @@
+pub mod create_user_profile;
+pub mod update_user_profile;
 pub mod create_trip;
 pub mod initiate_match;
 pub mod compute_match;
@@ -5,6 +7,8 @@ pub mod accept_match;
 pub mod reject_match;
 pub mod deactivate_trip;
 
+pub use create_user_profile::*;
+pub use update_user_profile::*;
 pub use create_trip::*;
 pub use initiate_match::*;
 pub use compute_match::*;

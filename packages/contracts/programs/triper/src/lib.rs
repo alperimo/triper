@@ -25,6 +25,24 @@ const COMP_DEF_OFFSET_COMPUTE_TRIP_MATCH: u32 = comp_def_offset("compute_trip_ma
 pub mod triper {
     use super::*;
 
+    /// Create a new user profile with encrypted preferences
+    pub fn create_user_profile(
+        ctx: Context<CreateUserProfile>,
+        encrypted_data: Vec<u8>,
+        public_key: [u8; 32],
+    ) -> Result<()> {
+        instructions::create_user_profile_handler(ctx, encrypted_data, public_key)
+    }
+
+    /// Update user profile preferences
+    pub fn update_user_profile(
+        ctx: Context<UpdateUserProfile>,
+        encrypted_data: Vec<u8>,
+        public_key: [u8; 32],
+    ) -> Result<()> {
+        instructions::update_user_profile_handler(ctx, encrypted_data, public_key)
+    }
+
     // Accept a match
     pub fn accept_match(ctx: Context<AcceptMatch>) -> Result<()> {
         instructions::accept_match_handler(ctx)
@@ -73,22 +91,24 @@ pub mod triper {
     ) -> Result<()> {
         ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         
-        // Get encrypted data from Trip accounts
+        // Get encrypted data from Trip and UserProfile accounts
         let trip_a = &ctx.accounts.trip_a;
         let trip_b = &ctx.accounts.trip_b;
+        let user_profile_a = &ctx.accounts.user_profile_a;
+        let user_profile_b = &ctx.accounts.user_profile_b;
         
         // Use Trip A's public key (both trips should use MXE's public key in production)
         let pub_key = trip_a.public_key;
         
         // Build arguments for Arcium MPC
-        // Following hello-world example: pub_key, nonce, then encrypted field elements
+        // Order: waypoints_a, waypoints_b, interests_a, interests_b
         let mut args = vec![
             Argument::ArcisPubkey(pub_key),
             Argument::PlaintextU128(nonce),
         ];
         
-        // Split trip_a encrypted_data into 32-byte chunks for EncryptedU8 arguments
-        for chunk in trip_a.encrypted_data.chunks(32) {
+        // Split trip_a encrypted_waypoints into 32-byte chunks for EncryptedU8 arguments
+        for chunk in trip_a.encrypted_waypoints.chunks(32) {
             if chunk.len() == 32 {
                 let mut field = [0u8; 32];
                 field.copy_from_slice(chunk);
@@ -96,14 +116,36 @@ pub mod triper {
             }
         }
         
-        // Split trip_b encrypted_data into 32-byte chunks for EncryptedU8 arguments
-        for chunk in trip_b.encrypted_data.chunks(32) {
+        // Split trip_b encrypted_waypoints into 32-byte chunks for EncryptedU8 arguments
+        for chunk in trip_b.encrypted_waypoints.chunks(32) {
             if chunk.len() == 32 {
                 let mut field = [0u8; 32];
                 field.copy_from_slice(chunk);
                 args.push(Argument::EncryptedU8(field));
             }
         }
+        
+        // Split user_profile_a encrypted_data (interests) into 32-byte chunks
+        for chunk in user_profile_a.encrypted_data.chunks(32) {
+            if chunk.len() == 32 {
+                let mut field = [0u8; 32];
+                field.copy_from_slice(chunk);
+                args.push(Argument::EncryptedU8(field));
+            }
+        }
+        
+        // Split user_profile_b encrypted_data (interests) into 32-byte chunks
+        for chunk in user_profile_b.encrypted_data.chunks(32) {
+            if chunk.len() == 32 {
+                let mut field = [0u8; 32];
+                field.copy_from_slice(chunk);
+                args.push(Argument::EncryptedU8(field));
+            }
+        }
+        
+        // TODO: Add PUBLIC date parameters once Arcium SDK supports PlaintextI64
+        // For now, dates are stored publicly in Trip but still passed through MPC
+        // This is acceptable since dates are already visible on-chain
 
         queue_computation(
             ctx.accounts,
@@ -114,8 +156,10 @@ pub mod triper {
         )?;
         
         msg!("Queued MPC computation for match record: {}", ctx.accounts.match_record.key());
-        msg!("Trip A: {} bytes ({} encrypted fields)", trip_a.encrypted_data.len(), trip_a.encrypted_data.len() / 32);
-        msg!("Trip B: {} bytes ({} encrypted fields)", trip_b.encrypted_data.len(), trip_b.encrypted_data.len() / 32);
+        msg!("Trip A waypoints: {} bytes ({} encrypted fields)", trip_a.encrypted_waypoints.len(), trip_a.encrypted_waypoints.len() / 32);
+        msg!("Trip B waypoints: {} bytes ({} encrypted fields)", trip_b.encrypted_waypoints.len(), trip_b.encrypted_waypoints.len() / 32);
+        msg!("UserProfile A interests: {} bytes ({} encrypted fields)", user_profile_a.encrypted_data.len(), user_profile_a.encrypted_data.len() / 32);
+        msg!("UserProfile B interests: {} bytes ({} encrypted fields)", user_profile_b.encrypted_data.len(), user_profile_b.encrypted_data.len() / 32);
         
         Ok(())
     }

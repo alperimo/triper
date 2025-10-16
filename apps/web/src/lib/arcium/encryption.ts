@@ -12,26 +12,24 @@ import type { H3Index, Waypoint, InterestTag } from '@/types';
 
 // Constants from Rust circuit
 const MAX_WAYPOINTS = 20;
-const MAX_INTERESTS = 32;
+const MAX_INTERESTS = 32; // DEPRECATED: Now in UserProfile
 
 /**
  * TripData structure EXACTLY matching Rust circuit in encrypted-ixs/src/trip_matching.rs
  * 
- * pub struct TripData {
+ * - Waypoints: Encrypted in Trip.encrypted_waypoints (WaypointData struct)
+ * - Interests: Encrypted in UserProfile.encrypted_data (UserInterests struct)
+ * - Dates: Stored publicly in Trip (start_date, end_date fields)
+ * 
+ * pub struct WaypointData {
  *     waypoints: [u64; 20],      // H3 cells at resolution 7
  *     waypoint_count: u8,
- *     start_date: i64,           // Unix timestamp
- *     end_date: i64,             // Unix timestamp  
- *     interests: [bool; 32],     // Boolean flags
  * }
  * 
- * Total size: 20*8 + 1 + 8 + 8 + 32 = 209 bytes
+ * Total size: 20*8 + 1 = 161 bytes
  */
 export interface TripData {
   waypoints: Waypoint[];    // Will be converted to H3 cells and padded to 20
-  startDate: Date;
-  endDate: Date;
-  interests: InterestTag[]; // Will be converted to bool[32]
 }
 
 /**
@@ -76,16 +74,16 @@ export async function initializeEncryption(
 
 /**
  * Serialize trip data to format expected by Arcium circuit
- * MUST match encrypted-ixs/src/trip_matching.rs TripData struct EXACTLY
+ * MUST match encrypted-ixs/src/trip_matching.rs WaypointData struct EXACTLY
  * 
  * Rust structure:
- * pub struct TripData {
- *     waypoints: [u64; 20],      // H3 cells
+ * pub struct WaypointData {
+ *     waypoints: [u64; 20],
  *     waypoint_count: u8,
- *     start_date: i64,
- *     end_date: i64,
- *     interests: [bool; 32],
  * }
+ * 
+ * NOTE: Dates are PUBLIC (stored in Trip.start_date, Trip.end_date)
+ * NOTE: Interests are in UserProfile.encrypted_data (separate account)
  */
 export function serializeTripData(data: TripData): bigint[] {
   const serialized: bigint[] = [];
@@ -106,36 +104,10 @@ export function serializeTripData(data: TripData): bigint[] {
   // 2. Waypoint count (u8)
   serialized.push(BigInt(actualWaypointCount));
   
-  // 3. Start date (i64 - Unix timestamp in seconds)
-  serialized.push(BigInt(Math.floor(data.startDate.getTime() / 1000)));
-  
-  // 4. End date (i64 - Unix timestamp in seconds)
-  serialized.push(BigInt(Math.floor(data.endDate.getTime() / 1000)));
-  
-  // 5. Interests (32 booleans)
-  const interestBools = convertInterestsToBoolArray(data.interests);
-  for (const flag of interestBools) {
-    serialized.push(flag ? BigInt(1) : BigInt(0));
-  }
   
   return serialized;
 }
 
-/**
- * Convert InterestTag enum array to boolean[32]
- * Maps interest tags to their fixed positions (0-31)
- */
-function convertInterestsToBoolArray(interests: InterestTag[]): boolean[] {
-  const bools = new Array(MAX_INTERESTS).fill(false);
-  
-  for (const interest of interests) {
-    if (interest >= 0 && interest < MAX_INTERESTS) {
-      bools[interest] = true;
-    }
-  }
-  
-  return bools;
-}
 
 /**
  * Encrypt trip data using RescueCipher
