@@ -376,7 +376,7 @@ export default function MapPage() {
       {/* Click-to-add hint - Show at bottom center when no pending pin */}
       {!pendingPin && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm shadow-lg">
+          <div className="bg-secondary/50 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-full text-sm shadow-md border border-gray-200/50">
             💡 Click anywhere on the map to add a location
           </div>
         </div>
