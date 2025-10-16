@@ -3,11 +3,12 @@
 import { MapView } from '@/components/map/MapView';
 import { RouteSearchBar } from '@/components/map/RouteSearchBar';
 import { RouteWaypointPanel, Waypoint } from '@/components/map/RouteWaypointPanel';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTrips } from '@/hooks/useTrips';
 import { useUserStore } from '@/lib/store/user';
 import { showSuccess, showError } from '@/lib/toast';
 import { CheckIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { getRoute, type RoutingProfile, formatDistance, formatDuration, getAvailableProfiles } from '@/lib/services/routing';
 
 export default function MapPage() {
   const { createTrip, loading } = useTrips();
@@ -15,6 +16,10 @@ export default function MapPage() {
   
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [destination, setDestination] = useState<Waypoint | undefined>(undefined);
+  const [routingProfile, setRoutingProfile] = useState<RoutingProfile>('straight'); // Default to most private
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+  const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const availableProfiles = getAvailableProfiles(); // Check what's available
   
   // Pin placement mode
   const [pendingPin, setPendingPin] = useState<{
@@ -119,6 +124,52 @@ export default function MapPage() {
   const showSearchBar = !hasAnyWaypoints && !pendingPin; // Show map search when no waypoints and no pending pin
   const showPanel = hasAnyWaypoints; // Show panel ONLY if there are waypoints (completely hidden otherwise)
 
+  // Fetch route when waypoints or routing profile changes
+  useEffect(() => {
+    const fetchRoute = async () => {
+      const allPoints = [...waypoints];
+      if (destination) {
+        allPoints.push(destination);
+      }
+      
+      // Need at least 2 points to draw a route
+      if (allPoints.length < 2) {
+        setRouteCoordinates([]);
+        setRouteInfo(null);
+        return;
+      }
+      
+      try {
+        const routeWaypoints = allPoints.map(w => ({ lng: w.lng, lat: w.lat }));
+        const result = await getRoute(routeWaypoints, routingProfile);
+        setRouteCoordinates(result.coordinates);
+        setRouteInfo({ distance: result.distance, duration: result.duration });
+      } catch (error) {
+        console.error('Failed to fetch route:', error);
+        // Fallback to straight line
+        const straightCoords = allPoints.map(w => [w.lng, w.lat] as [number, number]);
+        setRouteCoordinates(straightCoords);
+        setRouteInfo(null);
+      }
+    };
+    
+    fetchRoute();
+  }, [waypoints, destination, routingProfile]);
+
+  // Calculate route lines connecting waypoints
+  const routeLines = useMemo(() => {
+    // If we have fetched route coordinates, use them
+    if (routeCoordinates.length > 0) {
+      return [{
+        coordinates: routeCoordinates,
+        color: routingProfile === 'car' ? '#3b82f6' : routingProfile === 'foot' ? '#10b981' : routingProfile === 'bike' ? '#f59e0b' : '#6b8e23',
+        width: 4,
+      }];
+    }
+    
+    return [];
+  }, [routeCoordinates, routingProfile]);
+
   return (
     <div className="relative h-full w-full">
       {/* Search Bar - Only show when no waypoints and no pending pin */}
@@ -155,6 +206,72 @@ export default function MapPage() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Routing Profile Selector - Only show when there are waypoints AND multiple routing options available */}
+      {hasAnyWaypoints && availableProfiles.length > 1 && (
+        <div className="absolute top-4 right-4 z-30 bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex">
+            {availableProfiles.includes('straight') && (
+              <button
+                onClick={() => setRoutingProfile('straight')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  routingProfile === 'straight'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Straight line (most private)"
+              >
+                ➖ Direct
+              </button>
+            )}
+            {availableProfiles.includes('car') && (
+              <button
+                onClick={() => setRoutingProfile('car')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
+                  routingProfile === 'car'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Car routing (requires self-hosted server)"
+              >
+                � Car
+              </button>
+            )}
+            {availableProfiles.includes('foot') && (
+              <button
+                onClick={() => setRoutingProfile('foot')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
+                  routingProfile === 'foot'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Walking route (requires self-hosted server)"
+              >
+                � Walk
+              </button>
+            )}
+            {availableProfiles.includes('bike') && (
+              <button
+                onClick={() => setRoutingProfile('bike')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
+                  routingProfile === 'bike'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Bicycle routing (requires self-hosted server)"
+              >
+                🚴 Bike
+              </button>
+            )}
+          </div>
+          {routeInfo && (
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 flex gap-4">
+              <span>📏 {formatDistance(routeInfo.distance)}</span>
+              <span>⏱️ {formatDuration(routeInfo.duration)}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -240,6 +357,8 @@ export default function MapPage() {
         showControls={true}
         initialCenter={mapCenter || [-122.45, 37.78]}
         initialZoom={mapCenter ? 15 : 10}
+        // Pass route lines connecting waypoints
+        routeLines={routeLines}
         // Pass waypoints and pending pin as markers
         markers={[
           // Pending pin (yellow/orange)

@@ -44,6 +44,8 @@ export interface MapViewProps {
   h3Cells?: Array<{ h3Index: H3Index; color?: string; opacity?: number }>;
   /** Markers to display */
   markers?: Array<{ lng: number; lat: number; label?: string; color?: string }>;
+  /** Route lines to display between waypoints */
+  routeLines?: Array<{ coordinates: [number, number][]; color?: string; width?: number }>;
   /** Children to render on top of map */
   children?: React.ReactNode;
 }
@@ -83,6 +85,7 @@ export function MapView({
   showControls = true,
   h3Cells = [],
   markers = [],
+  routeLines = [],
   children,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
@@ -143,6 +146,29 @@ export function MapView({
     };
   }, [h3Cells]);
 
+  /**
+   * Convert route lines to GeoJSON
+   */
+  const routeLinesGeoJSON = React.useMemo(() => {
+    if (routeLines.length === 0) return null;
+    
+    return {
+      type: 'FeatureCollection' as const,
+      features: routeLines.map((route, index) => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: route.coordinates,
+        },
+        properties: {
+          color: route.color || '#6b8e23',
+          width: route.width || 4,
+          id: `route-${index}`,
+        },
+      })),
+    };
+  }, [routeLines]);
+
   return (
     <div className="relative w-full" style={{ height }}>
       <Map
@@ -182,6 +208,38 @@ export function MapView({
                 'line-color': ['get', 'color'],
                 'line-width': 2,
                 'line-opacity': 0.6,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Route Lines - Connection between waypoints */}
+        {routeLinesGeoJSON && (
+          <Source id="route-lines" type="geojson" data={routeLinesGeoJSON}>
+            <Layer
+              id="route-line-casing"
+              type="line"
+              paint={{
+                'line-color': '#ffffff',
+                'line-width': ['get', 'width'],
+                'line-opacity': 0.8,
+              }}
+              layout={{
+                'line-cap': 'round',
+                'line-join': 'round',
+              }}
+            />
+            <Layer
+              id="route-line-main"
+              type="line"
+              paint={{
+                'line-color': ['get', 'color'],
+                'line-width': ['-', ['get', 'width'], 2],
+                'line-opacity': 1,
+              }}
+              layout={{
+                'line-cap': 'round',
+                'line-join': 'round',
               }}
             />
           </Source>
