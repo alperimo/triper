@@ -20,7 +20,7 @@ const featureHighlights = [
   {
     title: 'Private Route Builder',
     description:
-      'Create detailed routes, set date windows between stops, and decide how precise each waypoint should be — all encrypted end-to-end.',
+      'Create detailed routes, set date windows, and control waypoint precision — all end-to-end encrypted.',
     icon: ShieldCheckIcon,
     stat: 'Route data locked in MPC',
   },
@@ -130,20 +130,8 @@ export default function Home() {
             <Link href="#faq" className="rounded-full px-3 py-1 text-gray-600 transition hover:text-gray-900">
               FAQ
             </Link>
-            <Link href="/map" className="rounded-full px-3 py-1 text-gray-600 transition hover:text-gray-900">
-              Dashboard
-            </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="#how-it-works"
-              className="hidden rounded-full border border-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary hover:bg-primary/10 lg:inline-flex"
-            >
-              Explore the flow
-            </Link>
-
-          </div>
         </div>
       </header>
 
@@ -336,7 +324,7 @@ export default function Home() {
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.35em] text-primary">Encrypted matchmaking</p>
               <h3 className="text-2xl font-semibold text-gray-900">
-                Get route overlap and interest alignment scores in seconds — powered by Arcium MPC.
+                Get route overlap and interest alignment scores in seconds.
               </h3>
             </div>
             <Link
