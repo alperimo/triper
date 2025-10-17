@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { AnchorProvider, Program, Wallet } from '@coral-xyz/anchor';
-import { getUserTrips } from '@/lib/solana/create-trip';
+import { getUserTrips } from '@/lib/solana/trip-actions';
 import type { Triper } from '@/lib/anchor/types';
 import triperIdl from '@/lib/anchor/triper.json';
 

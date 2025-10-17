@@ -3,7 +3,7 @@ import { useAnchorWallet, useConnection } from '@solana/wallet-adapter-react';
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { useTripStore } from '@/lib/store/trip';
-import { createTrip as createTripOnChain } from '@/lib/solana/create-trip';
+import { createTrip as createTripOnChain } from '@/lib/solana/trip-actions';
 import type { Trip, Waypoint, InterestTag } from '@/types';
 import IDL from '@/lib/anchor/triper.json';
 import type { Triper } from '@/lib/anchor/types';

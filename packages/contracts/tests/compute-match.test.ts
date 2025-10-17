@@ -29,7 +29,7 @@ import {
   createVariantTripData,
   createSampleUserData
 } from "./utils";
-import { createTrip } from "../../../apps/web/src/lib/solana/create-trip";
+import { createTrip } from "../../../apps/web/src/lib/solana/trip-actions";
 import { createOrUpdateUserProfile } from "../../../apps/web/src/lib/solana/user-actions";
 
 describe("Arcium Trip Matching", () => {

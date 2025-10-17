@@ -17,7 +17,7 @@ import {
 } from '@/lib/arcium/encryption';
 import { computeTripMatch } from '@/lib/arcium/compute-match';
 import { awaitMatchResult, type MatchResult } from '@/lib/arcium/events';
-import { createTrip } from '@/lib/solana/create-trip';
+import { createTrip } from '@/lib/solana/trip-actions';
 import { acceptMatch, rejectMatch } from '@/lib/solana/match-actions';
 import type { Triper } from '@/lib/anchor/types';
 import triperIdl from '@/lib/anchor/triper.json';
