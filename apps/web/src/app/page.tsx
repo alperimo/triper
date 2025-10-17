@@ -143,9 +143,7 @@ export default function Home() {
             >
               Explore the flow
             </Link>
-            <div className="rounded-full bg-gradient-to-r from-primary to-primary-dark px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
-              <WalletButton />
-            </div>
+
           </div>
         </div>
       </header>
