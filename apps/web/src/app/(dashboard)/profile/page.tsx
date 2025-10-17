@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useUserStore } from '@/lib/store/user';
 import { useTripStore } from '@/lib/store/trip';
 import { motion } from 'framer-motion';
@@ -8,7 +9,8 @@ import Link from 'next/link';
 import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
 
 export default function ProfilePage() {
-  const { publicKey, disconnect } = useUserStore();
+  const { publicKey } = useUserStore();
+  const { disconnect: disconnectWallet } = useWallet();
   const { myTrips: trips } = useTripStore();
 
   const truncateAddress = (address: string) => {
@@ -37,7 +39,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <button
-              onClick={disconnect}
+              onClick={() => disconnectWallet()}
               className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors border border-red-200"
             >
               Disconnect
