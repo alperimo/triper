@@ -25,17 +25,13 @@ export function WalletButton() {
   // Prevent hydration mismatch by only rendering on client
   if (!mounted) {
     return (
-      <div className="relative z-50">
-        <div className="rounded-full bg-gradient-to-r from-primary to-primary-dark px-6 py-2 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
-          Select Wallet
-        </div>
-      </div>
+      <button className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
+        Select Wallet
+      </button>
     );
   }
   
   return (
-    <div className="relative z-50">
-      <WalletMultiButton className="!bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary !rounded-full !px-6 !py-2 !text-sm !font-semibold !text-white shadow-[var(--shadow-soft)] transition-all" />
-    </div>
+    <WalletMultiButton className="!inline-flex !items-center !gap-2 !rounded-full !border !border-gray-200 !px-6 !py-3 !text-sm !font-semibold !text-gray-700 !bg-white hover:!border-gray-300 hover:!bg-gray-50 active:!bg-gray-100 !transition-all !shadow-none" />
   );
 }

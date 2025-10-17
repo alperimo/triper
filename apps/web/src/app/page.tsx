@@ -101,8 +101,8 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="absolute inset-0 -z-10">
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-y-0 left-[-10%] w-[55%] bg-[radial-gradient(circle_at_top,rgba(107,142,35,0.25),transparent_65%)] blur-3xl" />
         <div className="absolute bottom-[-20%] right-[-5%] w-[45%] h-[60%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.18),transparent_55%)] blur-3xl" />
         <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/60 to-transparent" />
@@ -231,7 +231,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="absolute -bottom-10 -right-6 w-48 rounded-3xl border border-white/40 bg-white/80 p-5 text-sm text-gray-700 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+            <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border border-white/40 bg-white/80 p-5 text-sm text-gray-700 shadow-[var(--shadow-soft)] backdrop-blur-xl">
               <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
                 <span>Assurance</span>
                 <span className="text-green-500">High</span>

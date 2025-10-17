@@ -108,6 +108,10 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
   background-image: var(--gradient-sky), var(--gradient-warm);
