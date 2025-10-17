@@ -442,12 +442,6 @@ export default function MapPage() {
       <div className="absolute bottom-8 left-8 z-20 hidden md:block">
         <div className="flex items-center gap-6 rounded-[26px] border border-white/40 bg-white/80 px-6 py-4 text-sm text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-gray-400">Profile</p>
-            <p className="text-sm font-semibold text-gray-900">{activeRouting.label}</p>
-            <p className="text-xs text-gray-500">{activeRouting.sublabel}</p>
-          </div>
-          <div className="h-10 w-px bg-gray-200/70" />
-          <div>
             <p className="text-xs uppercase tracking-[0.35em] text-gray-400">Stops</p>
             <p className="text-sm font-semibold text-gray-900">{totalStops || '—'}</p>
           </div>
