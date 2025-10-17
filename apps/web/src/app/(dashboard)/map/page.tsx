@@ -3,7 +3,7 @@
 import { MapView } from '@/components/map/MapView';
 import { RouteSearchBar } from '@/components/map/RouteSearchBar';
 import { RouteWaypointPanel, Waypoint } from '@/components/map/RouteWaypointPanel';
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ElementType } from 'react';
 import { useTrips } from '@/hooks/useTrips';
 import { useUserStore } from '@/lib/store/user';
@@ -24,6 +24,9 @@ export default function MapPage() {
   const { createTrip, loading } = useTrips();
   const { publicKey } = useUserStore();
   
+  const rootContainerRef = useRef<HTMLDivElement | null>(null);
+  const desktopPanelRef = useRef<HTMLDivElement | null>(null);
+
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [destination, setDestination] = useState<Waypoint | undefined>(undefined);
   const [routingProfile, setRoutingProfile] = useState<RoutingProfile>('straight'); // Default to most private
@@ -83,6 +86,7 @@ export default function MapPage() {
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true); // For mobile collapsed state
   const [isDesktopPanelCollapsed, setIsDesktopPanelCollapsed] = useState(false); // For desktop slide in/out
+  const [desktopToggleTop, setDesktopToggleTop] = useState<number | null>(null);
 
   // Navigate map to a specific location
   const navigateToLocation = useCallback((lat: number, lng: number) => {
@@ -285,8 +289,50 @@ export default function MapPage() {
     }
   }, [waypoints, destination, pendingPin, navigateToLocation]);
 
+  useEffect(() => {
+    const rootEl = rootContainerRef.current;
+    const panelEl = desktopPanelRef.current;
+
+    if (!rootEl || !panelEl) return;
+
+    const updateTogglePosition = () => {
+      const refreshedRoot = rootContainerRef.current;
+      const refreshedPanel = desktopPanelRef.current;
+
+      if (!refreshedRoot || !refreshedPanel) return;
+
+      const panelRect = refreshedPanel.getBoundingClientRect();
+      const rootRect = refreshedRoot.getBoundingClientRect();
+
+      const nextTop = panelRect.top + panelRect.height / 2 - rootRect.top;
+
+      setDesktopToggleTop((prev) => {
+        if (prev === null) return nextTop;
+        return Math.abs(prev - nextTop) > 0.5 ? nextTop : prev;
+      });
+    };
+
+    updateTogglePosition();
+
+    let resizeObserver: ResizeObserver | null = null;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => updateTogglePosition());
+      resizeObserver.observe(panelEl);
+    }
+
+    window.addEventListener('resize', updateTogglePosition);
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      window.removeEventListener('resize', updateTogglePosition);
+    };
+  }, [isDesktopPanelCollapsed]);
+
   return (
-    <div className="relative h-full w-full">
+    <div ref={rootContainerRef} className="relative h-full w-full">
       {/* Search Bar - Only show when no waypoints and no pending pin */}
       {showSearchBar && (
         <div className="absolute top-4 left-4 right-4 z-20 md:right-auto md:w-96">
@@ -365,7 +411,8 @@ export default function MapPage() {
       <>
         {/* Desktop Panel - Slides in/out from left */}
         <div
-          className={`hidden md:block absolute top-4 bottom-4 z-20 w-96 transition-all duration-300 ${
+          ref={desktopPanelRef}
+          className={`hidden md:block absolute top-4 z-20 w-96 transition-all duration-300 ${
             isDesktopPanelCollapsed ? '-left-96' : 'left-4'
           }`}
         >
@@ -382,14 +429,15 @@ export default function MapPage() {
             pendingPin={pendingPin}
             onConfirmPending={handleConfirmPin}
             onCancelPending={handleCancelPin}
-            className="h-full"
+            className="w-full"
           />
         </div>
 
         {/* Desktop Toggle Button - Right edge of panel */}
         <button
           onClick={() => setIsDesktopPanelCollapsed(!isDesktopPanelCollapsed)}
-          className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 w-8 h-16 bg-white hover:bg-gray-50 border border-gray-200 items-center justify-center rounded-r-lg shadow-md transition-all duration-300 ${
+          style={{ top: desktopToggleTop !== null ? desktopToggleTop : '50%' }}
+          className={`hidden md:flex absolute -translate-y-1/2 z-30 w-8 h-16 bg-white hover:bg-gray-50 border border-gray-200 items-center justify-center rounded-r-lg shadow-md transition-all duration-300 ${
             isDesktopPanelCollapsed ? 'left-0' : 'left-[25rem]'
           }`}
           title={isDesktopPanelCollapsed ? 'Show route planner' : 'Hide route planner'}

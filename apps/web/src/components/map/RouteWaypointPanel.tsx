@@ -172,12 +172,14 @@ export function RouteWaypointPanel({
     ? `${waypoints.length} waypoint${waypoints.length === 1 ? '' : 's'}${destination ? ' + destination' : ''}`
     : 'Drop encrypted points to begin planning';
   const showEmptyState = waypoints.length === 0 && !destination && !hasPendingPin && !expandedSearch;
+  const desktopMaxHeight = 'min(85vh, calc(100vh - 5rem))';
+  const containerMaxHeight = isMobile ? (isCollapsed ? 'auto' : '80vh') : desktopMaxHeight;
 
   return (
     <div
       className={`relative flex flex-col border border-white/40 bg-white/80 ${isMobile ? 'rounded-t-[32px]' : 'rounded-[32px]'} shadow-[var(--shadow-card)] backdrop-blur-xl ${className}`}
       style={{
-        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : '86.5%',
+        maxHeight: containerMaxHeight,
         touchAction: 'none',
       }}
     >
