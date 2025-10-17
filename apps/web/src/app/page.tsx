@@ -225,7 +225,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 text-sm text-primary">
+                <div className="rounded-2xl border border-white/50 bg-white/85 px-4 py-4 text-sm font-medium text-primary shadow-[var(--shadow-soft)]">
                   🔐 MPC running — compatibility match 88% with 3 travelers on similar routes.
                 </div>
               </div>
@@ -249,7 +249,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.4 }}
-              className="mx-auto inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-primary"
+              className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white/85 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-primary shadow-[var(--shadow-soft)]"
             >
               Capabilities
             </motion.span>
@@ -299,7 +299,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ duration: 0.4 }}
-              className="mx-auto inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-primary"
+              className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white/85 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-primary shadow-[var(--shadow-soft)]"
             >
               Flow
             </motion.span>
@@ -335,7 +335,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-between gap-6 rounded-[32px] border border-primary/15 bg-primary/5 px-8 py-10 text-center md:flex-row md:text-left">
+          <div className="mt-12 flex flex-col items-center justify-between gap-6 rounded-[32px] border border-white/50 bg-white/85 px-8 py-10 text-center shadow-[var(--shadow-soft)] backdrop-blur md:flex-row md:text-left">
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.35em] text-primary">Encrypted matchmaking</p>
               <h3 className="text-2xl font-semibold text-gray-900">

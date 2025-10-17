@@ -26,7 +26,7 @@ export function WalletButton() {
   if (!mounted) {
     return (
       <div className="relative z-50">
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg px-6 py-2 text-sm font-medium">
+        <div className="rounded-full bg-gradient-to-r from-primary to-primary-dark px-6 py-2 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
           Select Wallet
         </div>
       </div>
@@ -35,7 +35,7 @@ export function WalletButton() {
   
   return (
     <div className="relative z-50">
-      <WalletMultiButton className="!bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 !rounded-lg !px-6 !py-2 !text-sm !font-medium transition-all" />
+      <WalletMultiButton className="!bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary !rounded-full !px-6 !py-2 !text-sm !font-semibold !text-white shadow-[var(--shadow-soft)] transition-all" />
     </div>
   );
 }
