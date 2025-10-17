@@ -177,7 +177,7 @@ export function RouteWaypointPanel({
     <div
       className={`relative flex flex-col border border-white/40 bg-white/80 ${isMobile ? 'rounded-t-[32px]' : 'rounded-[32px]'} shadow-[var(--shadow-card)] backdrop-blur-xl ${className}`}
       style={{
-        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : '100%',
+        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : '86.5%',
         touchAction: 'none',
       }}
     >
@@ -191,7 +191,7 @@ export function RouteWaypointPanel({
         </button>
       )}
 
-      <div className="flex items-center justify-between gap-3 border-b border-white/30 bg-white/70 px-5 py-4 backdrop-blur">
+      <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Route Planner</h3>
           <p className="text-xs text-gray-500">{headerSubtitle}</p>
@@ -275,9 +275,7 @@ export function RouteWaypointPanel({
                     draggedIndex === index ? 'opacity-50' : 'hover:border-primary/30 hover:shadow-[var(--shadow-soft)]'
                   }`}
                 >
-                  <div className="absolute right-4 top-4 text-gray-300 transition group-hover:text-gray-500">
-                    <ArrowsUpDownIcon className="h-4 w-4" />
-                  </div>
+
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-sm font-semibold text-primary">
                       {index + 1}
@@ -411,18 +409,6 @@ export function RouteWaypointPanel({
               )}
             </>
           )}
-        </div>
-      )}
-
-      {!isMobile && hasPlannedStops && (
-        <div className="flex-shrink-0 border-t border-white/30 bg-white/70 px-5 py-4 backdrop-blur">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div>
-              {waypoints.length} waypoint{waypoints.length !== 1 ? 's' : ''}
-              {destination && ' + destination'}
-            </div>
-            {totalDistance && <div className="font-semibold text-gray-900">~{Math.round(totalDistance)} km</div>}
-          </div>
         </div>
       )}
     </div>
