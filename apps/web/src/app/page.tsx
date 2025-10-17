@@ -216,7 +216,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border border-white/40 bg-white/80 p-5 text-sm text-gray-700 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+            <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border-2 border-gray-200/80 bg-white p-5 text-sm text-gray-700 shadow-[0_25px_70px_-5px_rgba(0,0,0,0.25),0_10px_30px_-10px_rgba(0,0,0,0.2)] backdrop-blur-xl">
               <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
                 <span>Assurance</span>
                 <span className="text-green-500">High</span>
