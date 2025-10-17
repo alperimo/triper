@@ -6,6 +6,10 @@
   /* Light Theme */
   --background: #ffffff;
   --foreground: #1a1a1a;
+  --surface-muted: #f2f4f8;
+  --surface-raised: #ffffff;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-border: rgba(107, 142, 35, 0.18);
   
   /* Primary - Olive Green (buttons, CTAs, active states) */
   --primary: #6b8e23;
@@ -36,6 +40,20 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --info: #3b82f6;
+
+  /* Shadows */
+  --shadow-soft: 0 20px 40px -24px rgba(15, 23, 42, 0.45);
+  --shadow-card: 0 24px 60px -30px rgba(16, 24, 40, 0.35);
+  --shadow-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+
+  /* Gradients */
+  --gradient-olive: linear-gradient(135deg, rgba(107, 142, 35, 0.94), rgba(47, 80, 14, 0.94));
+  --gradient-sky: radial-gradient(circle at 20% 20%, rgba(135, 206, 250, 0.18), transparent 55%);
+  --gradient-warm: radial-gradient(circle at 80% 0%, rgba(255, 214, 150, 0.16), transparent 60%);
+
+  /* Typography */
+  --font-body: var(--font-sans, "Inter"), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-display, "Playfair Display"), "Times New Roman", serif;
 }
 
 @theme inline {
@@ -70,13 +88,18 @@
   --color-info: var(--info);
   
   /* Typography */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0f0f0f;
     --foreground: #f5f5f5;
+    --surface-muted: #10131a;
+    --surface-raised: #161b24;
+    --surface-glass: rgba(17, 20, 24, 0.72);
+    --surface-glass-border: rgba(135, 206, 250, 0.12);
     
     /* Slightly brighter in dark mode */
     --primary: #7fa92f;
@@ -86,9 +109,35 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image: var(--gradient-sky), var(--gradient-warm);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.018em;
+  }
+
+  h5,
+  h6 {
+    font-family: var(--font-body);
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: rgba(107, 142, 35, 0.2);
+  }
 }

@@ -1,24 +1,22 @@
 /**
  * RouteWaypointPanel - Side panel for managing trip waypoints
- * 
+ *
  * Features:
  * - Add up to 20 waypoints
- * - Dynamic "Add route" buttons
  * - Drag to reorder waypoints
- * - Remove waypoints
- * - Search integration for each waypoint
+ * - Inline search for waypoints and destination
+ * - Pending pin confirmation flow
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  PlusIcon, 
-  XMarkIcon, 
+import {
+  PlusIcon,
+  XMarkIcon,
   MapPinIcon,
   ArrowsUpDownIcon,
-  TrashIcon,
-  CheckIcon
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 import { RouteSearchBar } from './RouteSearchBar';
 
@@ -34,16 +32,23 @@ interface RouteWaypointPanelProps {
   waypoints: Waypoint[];
   destination?: Waypoint;
   onChange: (waypoints: Waypoint[], destination?: Waypoint) => void;
-  onSelectLocation?: (location: { lat: number; lng: number; name: string; address: string }) => void; // For pin confirmation flow
+  onSelectLocation?: (location: { lat: number; lng: number; name: string; address: string }) => void;
   onFocusWaypoint?: (waypoint: Waypoint) => void;
   onClose?: () => void;
   className?: string;
   maxWaypoints?: number;
   isMobile?: boolean;
-  isCollapsed?: boolean; // For mobile collapsed state
-  onToggleCollapse?: () => void; // Toggle collapse on mobile
-  onRequestAddWaypoint?: () => void; // Callback to trigger external search/pin flow
-  hasPendingPin?: boolean; // Disable adding waypoints when there's a pending pin confirmation
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  hasPendingPin?: boolean;
+  pendingPin?: {
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  } | null;
+  onConfirmPending?: () => void;
+  onCancelPending?: () => void;
 }
 
 export function RouteWaypointPanel({
@@ -58,8 +63,10 @@ export function RouteWaypointPanel({
   isMobile = false,
   isCollapsed = false,
   onToggleCollapse,
-  onRequestAddWaypoint,
   hasPendingPin = false,
+  pendingPin = null,
+  onConfirmPending,
+  onCancelPending,
 }: RouteWaypointPanelProps) {
   const [expandedSearch, setExpandedSearch] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -74,22 +81,17 @@ export function RouteWaypointPanel({
   }, [waypoints.length, previousWaypointsLength]);
 
   const addWaypoint = () => {
-    if (waypoints.length >= maxWaypoints) return;
-    
-    // Always use inline search within the panel
+    if (waypoints.length >= maxWaypoints || hasPendingPin) return;
     const newId = `waypoint-${Date.now()}`;
     setExpandedSearch(newId);
   };
 
   const setWaypoint = (index: number, location: { lat: number; lng: number; name: string; address: string }) => {
-    // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
     if (onSelectLocation) {
       onSelectLocation(location);
-      // Don't close search yet - wait for pin confirmation
       return;
     }
-    
-    // Fallback: directly add waypoint (for backwards compatibility)
+
     const newWaypoints = [...waypoints];
     newWaypoints[index] = {
       id: newWaypoints[index]?.id || `waypoint-${Date.now()}`,
@@ -100,14 +102,11 @@ export function RouteWaypointPanel({
   };
 
   const setDestinationWaypoint = (location: { lat: number; lng: number; name: string; address: string }) => {
-    // If pin confirmation handler provided, use it (triggers OK/Cancel flow)
     if (onSelectLocation) {
       onSelectLocation(location);
-      // Don't close search yet - wait for pin confirmation
       return;
     }
-    
-    // Fallback: directly add destination (for backwards compatibility)
+
     const newDestination: Waypoint = {
       id: 'destination',
       ...location,
@@ -115,9 +114,9 @@ export function RouteWaypointPanel({
     onChange(waypoints, newDestination);
     setExpandedSearch(null);
   };
-  
+
   const addDestination = () => {
-    // Always use inline search within the panel
+    if (hasPendingPin) return;
     setExpandedSearch('destination');
   };
 
@@ -142,7 +141,7 @@ export function RouteWaypointPanel({
     const draggedItem = newWaypoints[draggedIndex];
     newWaypoints.splice(draggedIndex, 1);
     newWaypoints.splice(index, 0, draggedItem);
-    
+
     onChange(newWaypoints, destination);
     setDraggedIndex(index);
   };
@@ -153,220 +152,276 @@ export function RouteWaypointPanel({
 
   const totalDistance = React.useMemo(() => {
     if (waypoints.length < 2 && !destination) return null;
-    
-    // Calculate approximate distance (rough estimation)
+
     let distance = 0;
     const allPoints = [...waypoints, destination].filter(Boolean) as Waypoint[];
-    
+
     for (let i = 0; i < allPoints.length - 1; i++) {
       const p1 = allPoints[i];
       const p2 = allPoints[i + 1];
       const dx = p2.lng - p1.lng;
       const dy = p2.lat - p1.lat;
-      distance += Math.sqrt(dx * dx + dy * dy) * 111; // Rough km conversion
+      distance += Math.sqrt(dx * dx + dy * dy) * 111;
     }
-    
+
     return distance;
   }, [waypoints, destination]);
 
+  const hasPlannedStops = waypoints.length > 0 || !!destination;
+  const headerSubtitle = hasPlannedStops
+    ? `${waypoints.length} waypoint${waypoints.length === 1 ? '' : 's'}${destination ? ' + destination' : ''}`
+    : 'Drop encrypted points to begin planning';
+  const showEmptyState = waypoints.length === 0 && !destination && !hasPendingPin && !expandedSearch;
+
   return (
-    <div 
-      className={`bg-white shadow-xl ${isMobile ? 'rounded-t-2xl' : 'rounded-lg'} border border-gray-200 flex flex-col ${className}`}
-      style={{ 
-        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : 'auto',
-        touchAction: 'none' // Prevent map interaction on mobile
+    <div
+      className={`relative flex flex-col border border-white/40 bg-white/80 ${isMobile ? 'rounded-t-[32px]' : 'rounded-[32px]'} shadow-[var(--shadow-card)] backdrop-blur-xl ${className}`}
+      style={{
+        maxHeight: isMobile ? (isCollapsed ? 'auto' : '80vh') : '100%',
+        touchAction: 'none',
       }}
     >
-      {/* Drag Handle for Mobile */}
       {isMobile && (
         <button
           onClick={onToggleCollapse}
-          className="flex justify-center pt-3 pb-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          className="flex justify-center pt-3 pb-2"
           style={{ touchAction: 'none' }}
         >
-          <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+          <div className="h-1.5 w-12 rounded-full bg-gray-300" />
         </button>
       )}
-      
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+
+      <div className="flex items-center justify-between gap-3 border-b border-white/30 bg-white/70 px-5 py-4 backdrop-blur">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Plan Your Route</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Add up to {maxWaypoints} waypoints
-          </p>
+          <h3 className="text-lg font-semibold text-gray-900">Route Planner</h3>
+          <p className="text-xs text-gray-500">{headerSubtitle}</p>
         </div>
-      </div>
-
-      {/* Waypoints List - Hide when collapsed on mobile */}
-      {(!isMobile || !isCollapsed) && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ touchAction: 'pan-y' }}>
-        {/* Waypoints */}
-        {waypoints.map((waypoint, index) => (
-          <div
-            key={waypoint.id}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`relative group ${
-              draggedIndex === index ? 'opacity-50' : ''
-            }`}
-          >
-            <div className="flex items-start gap-2">
-              {/* Number Badge */}
-              <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
-                {index + 1}
-              </div>
-
-              {/* Waypoint Info */}
-              <button
-                onClick={() => {
-                  if (onFocusWaypoint) onFocusWaypoint(waypoint);
-                }}
-                className="flex-1 min-w-0 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
-              >
-                <div className="font-medium text-gray-900 truncate">{waypoint.name}</div>
-                <div className="text-xs text-gray-500 truncate">{waypoint.address}</div>
-              </button>
-
-              {/* Remove Button */}
-              <button
-                onClick={() => removeWaypoint(index)}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {/* Add Waypoint Search */}
-        {expandedSearch && expandedSearch.startsWith('waypoint-') && waypoints.length < maxWaypoints && (
-          <div className="flex items-start gap-2">
-            <div className="flex-shrink-0 w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
-              {waypoints.length + 1}
-            </div>
-            <div className="flex-1 min-w-0 relative">
-              <RouteSearchBar
-                onSelectLocation={(location) => {
-                  setWaypoint(waypoints.length, location);
-                }}
-                placeholder="Search for waypoint..."
-                fullWidthDropdown={true}
-                className="w-full"
-              />
-            </div>
-            <button
-              onClick={() => setExpandedSearch(null)}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
-            >
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          </div>
+        {!isMobile && (
+          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            Privacy on
+          </span>
         )}
-
-        {/* Add Waypoint Button - Disabled when there's a pending pin */}
-        {waypoints.length < maxWaypoints && !expandedSearch?.startsWith('waypoint-') && (
+        {isMobile && onClose && (
           <button
-            onClick={addWaypoint}
-            disabled={hasPendingPin}
-            className={`w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
-              hasPendingPin
-                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                : 'border-gray-300 text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5'
-            }`}
+            onClick={onClose}
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm"
           >
-            <PlusIcon className="w-5 h-5" />
-            <span className="font-medium">
-              {hasPendingPin 
-                ? 'Confirm or cancel pending location first'
-                : waypoints.length === 0 ? 'Add starting point' : 'Add waypoint'
-              }
-            </span>
+            Close
           </button>
         )}
+      </div>
 
-        {/* Destination */}
-        {waypoints.length > 0 && (
-          <>
-            <div className="border-t border-gray-200 my-4"></div>
-            
-            {destination ? (
-              <div className="flex items-start gap-2">
-                <div className="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center">
-                  <MapPinIcon className="w-5 h-5" />
+      {isMobile && isCollapsed ? (
+        <div className="px-5 pb-6 text-sm text-gray-500">
+          Swipe up to add encrypted stops and shape your itinerary.
+        </div>
+      ) : (
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-6" style={{ touchAction: 'pan-y' }}>
+          {pendingPin && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm text-primary shadow-[var(--shadow-soft)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.35em] text-primary/70">Pending location</p>
+                  <p className="mt-1 font-semibold text-primary">{pendingPin.name}</p>
+                  <p className="text-xs text-primary/80">{pendingPin.address}</p>
                 </div>
-                <button
-                  onClick={() => {
-                    if (onFocusWaypoint) onFocusWaypoint(destination);
-                  }}
-                  className="flex-1 min-w-0 px-3 py-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-left"
-                >
-                  <div className="font-medium text-gray-900 truncate">{destination.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{destination.address}</div>
-                </button>
-                <button
-                  onClick={removeDestination}
-                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
-                >
-                  <XMarkIcon className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onCancelPending}
+                    className="rounded-full border border-primary/10 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onConfirmPending}
+                    className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-xs font-semibold text-white shadow-[var(--shadow-soft)] transition hover:shadow-[var(--shadow-card)]"
+                  >
+                    <CheckIcon className="h-4 w-4" />
+                    Confirm
+                  </button>
+                </div>
               </div>
-            ) : expandedSearch === 'destination' ? (
-              <div className="flex items-start gap-2">
-                <div className="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center">
-                  <MapPinIcon className="w-5 h-5" />
+            </div>
+          )}
+
+          {showEmptyState ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-primary/30 bg-white/70 px-6 py-10 text-center shadow-[var(--shadow-soft)]">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <MapPinIcon className="h-6 w-6" />
+              </div>
+              <p className="mb-2 text-base font-semibold text-gray-900">Map ready for your first waypoint</p>
+              <p className="mb-4 text-sm text-gray-500">
+                Search above or drop a pin on the map to start building your encrypted itinerary.
+              </p>
+              <button
+                onClick={addWaypoint}
+                disabled={hasPendingPin}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:shadow-[var(--shadow-card)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <PlusIcon className="h-4 w-4" />
+                Add starting point
+              </button>
+            </div>
+          ) : (
+            <>
+              {waypoints.map((waypoint, index) => (
+                <div
+                  key={waypoint.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`group relative rounded-2xl border border-white/50 bg-white/85 p-4 shadow-sm transition ${
+                    draggedIndex === index ? 'opacity-50' : 'hover:border-primary/30 hover:shadow-[var(--shadow-soft)]'
+                  }`}
+                >
+                  <div className="absolute right-4 top-4 text-gray-300 transition group-hover:text-gray-500">
+                    <ArrowsUpDownIcon className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-sm font-semibold text-primary">
+                      {index + 1}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (onFocusWaypoint) onFocusWaypoint(waypoint);
+                      }}
+                      className="flex-1 min-w-0 text-left"
+                    >
+                      <p className="font-semibold text-gray-900">{waypoint.name}</p>
+                      <p className="text-xs text-gray-500">{waypoint.address}</p>
+                    </button>
+                    <button
+                      onClick={() => removeWaypoint(index)}
+                      className="rounded-full border border-transparent bg-white/70 p-2 text-gray-400 transition hover:text-red-500"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0 relative">
+              ))}
+
+              {expandedSearch && expandedSearch.startsWith('waypoint-') && waypoints.length < maxWaypoints && (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-600">
+                      {waypoints.length + 1}
+                    </div>
+                    <span>Add waypoint</span>
+                  </div>
                   <RouteSearchBar
-                    onSelectLocation={setDestinationWaypoint}
-                    placeholder="Search for destination..."
+                    onSelectLocation={(location) => {
+                      setWaypoint(waypoints.length, location);
+                    }}
+                    placeholder="Search for waypoint…"
                     fullWidthDropdown={true}
                     className="w-full"
                   />
+                  <div className="mt-3 text-right">
+                    <button
+                      onClick={() => setExpandedSearch(null)}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {waypoints.length < maxWaypoints && !expandedSearch?.startsWith('waypoint-') && (
                 <button
-                  onClick={() => setExpandedSearch(null)}
-                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                  onClick={addWaypoint}
+                  disabled={hasPendingPin}
+                  className={`w-full rounded-2xl border border-dashed px-5 py-4 text-sm font-semibold transition ${
+                    hasPendingPin
+                      ? 'border-gray-200 text-gray-400'
+                      : 'border-primary/30 text-primary hover:border-primary/50 hover:bg-primary/5'
+                  }`}
                 >
-                  <XMarkIcon className="w-5 h-5" />
+                  {hasPendingPin
+                    ? 'Confirm or cancel the pending location'
+                    : waypoints.length === 0
+                      ? 'Add starting point'
+                      : 'Add another waypoint'}
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={addDestination}
-                disabled={hasPendingPin}
-                className={`w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
-                  hasPendingPin
-                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'border-red-300 text-red-600 hover:border-red-400 hover:text-red-700'
-                }`}
-              >
-                <MapPinIcon className="w-5 h-5" />
-                <span className="font-medium">
-                  {hasPendingPin ? 'Confirm or cancel pending location first' : 'Add destination'}
-                </span>
-              </button>
-            )}
-          </>
-        )}
+              )}
+
+              {waypoints.length > 0 && (
+                <>
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                  {destination ? (
+                    <div className="relative rounded-2xl border border-red-200/60 bg-red-50/70 p-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500 text-white">
+                          <MapPinIcon className="h-5 w-5" />
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (onFocusWaypoint) onFocusWaypoint(destination);
+                          }}
+                          className="flex-1 min-w-0 text-left"
+                        >
+                          <p className="font-semibold text-gray-900">{destination.name}</p>
+                          <p className="text-xs text-gray-600">{destination.address}</p>
+                        </button>
+                        <button
+                          onClick={removeDestination}
+                          className="rounded-full border border-transparent bg-white/70 p-2 text-gray-400 transition hover:text-red-500"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : expandedSearch === 'destination' ? (
+                    <div className="rounded-2xl border border-dashed border-red-300 bg-white/70 p-4 shadow-sm">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-600">
+                        <MapPinIcon className="h-5 w-5" />
+                        <span>Add destination</span>
+                      </div>
+                      <RouteSearchBar
+                        onSelectLocation={setDestinationWaypoint}
+                        placeholder="Search for destination…"
+                        fullWidthDropdown={true}
+                        className="w-full"
+                      />
+                      <div className="mt-3 text-right">
+                        <button
+                          onClick={() => setExpandedSearch(null)}
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={addDestination}
+                      disabled={hasPendingPin}
+                      className={`w-full rounded-2xl border border-dashed px-5 py-4 text-sm font-semibold transition ${
+                        hasPendingPin
+                          ? 'border-gray-200 text-gray-400'
+                          : 'border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50'
+                      }`}
+                    >
+                      {hasPendingPin ? 'Confirm or cancel the pending location' : 'Add destination'}
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Footer with Stats - Hide on mobile, show only on desktop */}
-      {!isMobile && (waypoints.length > 0 || destination) && (
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-          <div className="flex items-center justify-between text-sm">
-            <div className="text-gray-600">
+      {!isMobile && hasPlannedStops && (
+        <div className="flex-shrink-0 border-t border-white/30 bg-white/70 px-5 py-4 backdrop-blur">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div>
               {waypoints.length} waypoint{waypoints.length !== 1 ? 's' : ''}
               {destination && ' + destination'}
             </div>
-            {totalDistance && (
-              <div className="font-medium text-gray-900">
-                ~{Math.round(totalDistance)} km
-              </div>
-            )}
+            {totalDistance && <div className="font-semibold text-gray-900">~{Math.round(totalDistance)} km</div>}
           </div>
         </div>
       )}

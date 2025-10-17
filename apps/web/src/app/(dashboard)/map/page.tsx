@@ -4,10 +4,19 @@ import { MapView } from '@/components/map/MapView';
 import { RouteSearchBar } from '@/components/map/RouteSearchBar';
 import { RouteWaypointPanel, Waypoint } from '@/components/map/RouteWaypointPanel';
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import type { ElementType } from 'react';
 import { useTrips } from '@/hooks/useTrips';
 import { useUserStore } from '@/lib/store/user';
 import { showSuccess, showError } from '@/lib/toast';
-import { CheckIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  LockClosedIcon,
+  TruckIcon,
+  UserIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 import { getRoute, type RoutingProfile, formatDistance, formatDuration, getAvailableProfiles } from '@/lib/services/routing';
 import { reverseGeocode } from '@/lib/services/geocoding';
 
@@ -21,6 +30,46 @@ export default function MapPage() {
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   const availableProfiles = getAvailableProfiles(); // Check what's available
+  const routingConfig: Record<
+    RoutingProfile,
+    { label: string; sublabel: string; gradient: string; icon: ElementType }
+  > = {
+    straight: {
+      label: 'Stealth',
+      sublabel: 'Direct & private',
+      gradient: 'from-slate-800 to-slate-600',
+      icon: LockClosedIcon,
+    },
+    car: {
+      label: 'Drive',
+      sublabel: 'Road optimised',
+      gradient: 'from-sky-600 to-blue-500',
+      icon: TruckIcon,
+    },
+    foot: {
+      label: 'Walk',
+      sublabel: 'Pedestrian safe',
+      gradient: 'from-emerald-600 to-teal-500',
+      icon: UserIcon,
+    },
+    bike: {
+      label: 'Ride',
+      sublabel: 'Cyclist friendly',
+      gradient: 'from-amber-500 to-orange-500',
+      icon: SparklesIcon,
+    },
+  };
+  const routingOptions = availableProfiles.map(profile => ({
+    profile,
+    ...routingConfig[profile],
+  }));
+  const routePalette: Record<RoutingProfile, string> = {
+    straight: '#334155',
+    car: '#2563eb',
+    foot: '#047857',
+    bike: '#f97316',
+  };
+  const activeRouting = routingConfig[routingProfile];
   
   // Pin placement mode
   const [pendingPin, setPendingPin] = useState<{
@@ -31,17 +80,12 @@ export default function MapPage() {
   } | null>(null);
   
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false); // For mobile collapsed state
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true); // For mobile collapsed state
   const [isDesktopPanelCollapsed, setIsDesktopPanelCollapsed] = useState(false); // For desktop slide in/out
-  const [showSearchForWaypoint, setShowSearchForWaypoint] = useState(false);
 
   // Navigate map to a specific location
   const navigateToLocation = useCallback((lat: number, lng: number) => {
     setMapCenter([lng, lat]);
-  }, []);
-
-  const handleRequestAddWaypoint = useCallback(() => {
   }, []);
 
   // Handle map click to add waypoint
@@ -68,8 +112,6 @@ export default function MapPage() {
   const handleSearchSelect = useCallback((location: { lat: number; lng: number; name: string; address: string }) => {
     setPendingPin(location);
     navigateToLocation(location.lat, location.lng);
-    setShowSearchForWaypoint(false); // Hide search after selection
-    setIsPanelOpen(true); // Show panel
     setIsPanelCollapsed(false); // Ensure mobile panel is expanded
     setIsDesktopPanelCollapsed(false); // Ensure desktop panel is visible
   }, [navigateToLocation]);
@@ -89,7 +131,6 @@ export default function MapPage() {
     
     setWaypoints(prev => [...prev, newWaypoint]);
     setPendingPin(null);
-    setIsPanelOpen(true); // Ensure panel is visible
     setIsPanelCollapsed(false);
     setIsDesktopPanelCollapsed(false);
   }, [pendingPin]);
@@ -97,7 +138,6 @@ export default function MapPage() {
   // Cancel pin placement - remove the pending waypoint
   const handleCancelPin = useCallback(() => {
     setPendingPin(null);
-    setShowSearchForWaypoint(false);
   }, []);
 
   // Handle waypoint focus
@@ -135,7 +175,6 @@ export default function MapPage() {
       setWaypoints([]);
       setDestination(undefined);
       setPendingPin(null);
-      setIsPanelOpen(false);
     } catch (error) {
       console.error('Create trip error:', error);
     }
@@ -143,8 +182,8 @@ export default function MapPage() {
 
   const hasRoute = waypoints.length > 0 || destination;
   const hasAnyWaypoints = waypoints.length > 0;
+  const totalStops = waypoints.length + (destination ? 1 : 0);
   const showSearchBar = !hasAnyWaypoints && !pendingPin; // Show map search when no waypoints and no pending pin
-  const showPanel = hasAnyWaypoints; // Show panel ONLY if there are waypoints (completely hidden otherwise)
 
   // Fetch route when waypoints or routing profile changes
   useEffect(() => {
@@ -182,11 +221,13 @@ export default function MapPage() {
   const routeLines = useMemo(() => {
     // If we have fetched route coordinates, use them
     if (routeCoordinates.length > 0) {
-      return [{
-        coordinates: routeCoordinates,
-        color: routingProfile === 'car' ? '#3b82f6' : routingProfile === 'foot' ? '#10b981' : routingProfile === 'bike' ? '#f59e0b' : '#6b8e23',
-        width: 6,
-      }];
+      return [
+        {
+          coordinates: routeCoordinates,
+          color: routePalette[routingProfile] ?? '#6b8e23',
+          width: 6,
+        },
+      ];
     }
     
     return [];
@@ -200,172 +241,144 @@ export default function MapPage() {
           <RouteSearchBar
             onSelectLocation={handleSearchSelect}
             placeholder="Search for places..."
-            onTogglePanel={() => setIsPanelOpen(true)}
-            isPanelOpen={false}
           />
         </div>
       )}
 
-      {/* Pin Confirmation Buttons - Show when pending pin */}
-      {pendingPin && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-white shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border border-gray-200">
-          <span className="text-sm font-medium text-gray-900 truncate max-w-xs">
-            {pendingPin.name}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleConfirmPin}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1 text-sm font-medium"
-            >
-              <CheckIcon className="w-4 h-4" />
-              OK
-            </button>
-            <button
-              onClick={handleCancelPin}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1 text-sm font-medium"
-            >
-              <XMarkIcon className="w-4 h-4" />
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Routing Profile Selector - Only show when there are waypoints AND multiple routing options available */}
-      {hasAnyWaypoints && availableProfiles.length > 1 && (
-        <div className="absolute top-4 right-4 z-30 bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
-          <div className="flex">
-            {availableProfiles.includes('straight') && (
-              <button
-                onClick={() => setRoutingProfile('straight')}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 ${
-                  routingProfile === 'straight'
-                    ? 'bg-gray-700 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-                title="Straight line (most private)"
-              >
-                ➖ Direct
-              </button>
-            )}
-            {availableProfiles.includes('car') && (
-              <button
-                onClick={() => setRoutingProfile('car')}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
-                  routingProfile === 'car'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-                title="Car routing (requires self-hosted server)"
-              >
-                � Car
-              </button>
-            )}
-            {availableProfiles.includes('foot') && (
-              <button
-                onClick={() => setRoutingProfile('foot')}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
-                  routingProfile === 'foot'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-                title="Walking route (requires self-hosted server)"
-              >
-                � Walk
-              </button>
-            )}
-            {availableProfiles.includes('bike') && (
-              <button
-                onClick={() => setRoutingProfile('bike')}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 border-l border-gray-200 ${
-                  routingProfile === 'bike'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-                title="Bicycle routing (requires self-hosted server)"
-              >
-                🚴 Bike
-              </button>
-            )}
+      {/* Routing Profile Selector */}
+      {hasAnyWaypoints && routingOptions.length > 0 && (
+        <div className="absolute top-4 right-4 z-30 space-y-3 rounded-[26px] border border-white/40 bg-white/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur">
+          <div className="flex flex-col gap-3">
+            {routingOptions.map(({ profile, label, sublabel, gradient, icon: Icon }) => {
+              const isActive = routingProfile === profile;
+              return (
+                <button
+                  key={profile}
+                  onClick={() => setRoutingProfile(profile)}
+                  className={`relative overflow-hidden rounded-2xl border px-5 py-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                    isActive
+                      ? 'border-transparent shadow-[var(--shadow-soft)] text-white'
+                      : 'border-white/70 bg-white/80 text-gray-700 hover:border-primary/20 hover:text-gray-900'
+                  }`}
+                  title={label}
+                >
+                  <div
+                    className={`absolute inset-0 transition ${
+                      isActive ? `bg-gradient-to-br ${gradient}` : 'bg-transparent'
+                    }`}
+                  />
+                  <div className="relative flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                        isActive
+                          ? 'border-white/30 bg-white/15 text-white'
+                          : 'border-primary/10 bg-primary/5 text-primary'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span
+                        className={`text-sm font-semibold ${
+                          isActive ? 'text-white' : 'text-gray-900'
+                        }`}
+                      >
+                        {label}
+                      </span>
+                      <span
+                        className={`text-xs ${
+                          isActive ? 'text-white/80' : 'text-gray-500'
+                        }`}
+                      >
+                        {sublabel}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
           {routeInfo && (
-            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 flex gap-4">
-              <span>📏 {formatDistance(routeInfo.distance)}</span>
-              <span>⏱️ {formatDuration(routeInfo.duration)}</span>
+            <div className="rounded-2xl border border-white/20 bg-white/70 px-4 py-3 text-xs font-medium text-gray-600 shadow-inner backdrop-blur">
+              <div className="flex items-center justify-between gap-6">
+                <span>📏 {formatDistance(routeInfo.distance)}</span>
+                <span>⏱️ {formatDuration(routeInfo.duration)}</span>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Waypoint Panel - Only show if there are waypoints OR panel is manually opened */}
-      {showPanel && (
-        <>
-          {/* Desktop Panel - Slides in/out from left */}
-          <div 
-            className={`hidden md:block absolute top-4 bottom-4 z-20 w-96 transition-all duration-300 ${
-              isDesktopPanelCollapsed ? '-left-96' : 'left-4'
-            }`}
-          >
-            <RouteWaypointPanel
-              waypoints={waypoints}
-              destination={destination}
-              onChange={(newWaypoints, newDestination) => {
-                setWaypoints(newWaypoints);
-                setDestination(newDestination);
-              }}
-              onSelectLocation={handleSearchSelect}
-              onFocusWaypoint={handleWaypointFocus}
-              hasPendingPin={!!pendingPin}
-              className="h-full"
-            />
-          </div>
+      {/* Waypoint Planner */}
+      <>
+        {/* Desktop Panel - Slides in/out from left */}
+        <div
+          className={`hidden md:block absolute top-4 bottom-4 z-20 w-96 transition-all duration-300 ${
+            isDesktopPanelCollapsed ? '-left-96' : 'left-4'
+          }`}
+        >
+          <RouteWaypointPanel
+            waypoints={waypoints}
+            destination={destination}
+            onChange={(newWaypoints, newDestination) => {
+              setWaypoints(newWaypoints);
+              setDestination(newDestination);
+            }}
+            onSelectLocation={handleSearchSelect}
+            onFocusWaypoint={handleWaypointFocus}
+            hasPendingPin={!!pendingPin}
+            pendingPin={pendingPin}
+            onConfirmPending={handleConfirmPin}
+            onCancelPending={handleCancelPin}
+            className="h-full"
+          />
+        </div>
 
-          {/* Desktop Toggle Button - Right edge of panel */}
-          <button
-            onClick={() => setIsDesktopPanelCollapsed(!isDesktopPanelCollapsed)}
-            className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 w-8 h-16 bg-white hover:bg-gray-50 border border-gray-200 items-center justify-center rounded-r-lg shadow-md transition-all duration-300 ${
-              isDesktopPanelCollapsed ? 'left-0' : 'left-[25rem]'
-            }`}
-            title={isDesktopPanelCollapsed ? 'Show route planner' : 'Hide route planner'}
-          >
-            {isDesktopPanelCollapsed ? (
-              <ChevronRightIcon className="w-5 h-5 text-gray-600" />
-            ) : (
-              <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
+        {/* Desktop Toggle Button - Right edge of panel */}
+        <button
+          onClick={() => setIsDesktopPanelCollapsed(!isDesktopPanelCollapsed)}
+          className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 w-8 h-16 bg-white hover:bg-gray-50 border border-gray-200 items-center justify-center rounded-r-lg shadow-md transition-all duration-300 ${
+            isDesktopPanelCollapsed ? 'left-0' : 'left-[25rem]'
+          }`}
+          title={isDesktopPanelCollapsed ? 'Show route planner' : 'Hide route planner'}
+        >
+          {isDesktopPanelCollapsed ? (
+            <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+          ) : (
+            <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+          )}
+        </button>
 
-          {/* Mobile Bottom Sheet - Expands upward from bottom */}
-          <div 
-            className="md:hidden fixed left-0 right-0 bottom-0 z-40 transition-all duration-300"
-          >
-            <RouteWaypointPanel
-              waypoints={waypoints}
-              destination={destination}
-              onChange={(newWaypoints, newDestination) => {
-                setWaypoints(newWaypoints);
-                setDestination(newDestination);
-              }}
-              onSelectLocation={handleSearchSelect}
-              onFocusWaypoint={handleWaypointFocus}
-              onClose={() => setIsPanelCollapsed(!isPanelCollapsed)}
-              onRequestAddWaypoint={handleRequestAddWaypoint}
-              hasPendingPin={!!pendingPin}
-              isMobile={true}
-              isCollapsed={isPanelCollapsed}
-              onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
-            />
-          </div>
-        </>
-      )}
+        {/* Mobile Bottom Sheet - Expands upward from bottom */}
+        <div className="md:hidden fixed left-0 right-0 bottom-0 z-40 transition-all duration-300">
+          <RouteWaypointPanel
+            waypoints={waypoints}
+            destination={destination}
+            onChange={(newWaypoints, newDestination) => {
+              setWaypoints(newWaypoints);
+              setDestination(newDestination);
+            }}
+            onSelectLocation={handleSearchSelect}
+            onFocusWaypoint={handleWaypointFocus}
+            onClose={() => setIsPanelCollapsed(!isPanelCollapsed)}
+            hasPendingPin={!!pendingPin}
+            pendingPin={pendingPin}
+            onConfirmPending={handleConfirmPin}
+            onCancelPending={handleCancelPin}
+            isMobile={true}
+            isCollapsed={isPanelCollapsed}
+            onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
+          />
+        </div>
+      </>
 
-      {/* Create Trip Button - Bottom Right (Desktop only, hidden on mobile when panel open) */}
+      {/* Create Trip Button - Bottom Right */}
       {hasRoute && (
-        <div className={`absolute bottom-8 right-8 z-20 ${isPanelOpen ? 'hidden md:flex' : 'flex'}`}>
+        <div className="absolute bottom-8 right-8 z-20 flex">
           <button
             onClick={handleCreateTrip}
             disabled={loading || waypoints.length === 0 || !destination}
-            className="px-6 py-3 bg-primary text-white rounded-lg shadow-lg hover:bg-primary-hover hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:shadow-[var(--shadow-card)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckIcon className="w-5 h-5" />
             <span>Create Trip</span>
@@ -373,11 +386,40 @@ export default function MapPage() {
         </div>
       )}
 
+      {/* Route status card */}
+      <div className="absolute bottom-8 left-8 z-20 hidden md:block">
+        <div className="flex items-center gap-6 rounded-[26px] border border-white/40 bg-white/80 px-6 py-4 text-sm text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-gray-400">Profile</p>
+            <p className="text-sm font-semibold text-gray-900">{activeRouting.label}</p>
+            <p className="text-xs text-gray-500">{activeRouting.sublabel}</p>
+          </div>
+          <div className="h-10 w-px bg-gray-200/70" />
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-gray-400">Stops</p>
+            <p className="text-sm font-semibold text-gray-900">{totalStops || '—'}</p>
+          </div>
+          {routeInfo && (
+            <>
+              <div className="h-10 w-px bg-gray-200/70" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-gray-400">Distance</p>
+                <p className="text-sm font-semibold text-gray-900">{formatDistance(routeInfo.distance)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-gray-400">ETA</p>
+                <p className="text-sm font-semibold text-gray-900">{formatDuration(routeInfo.duration)}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Click-to-add hint - Show at bottom center when no pending pin */}
       {!pendingPin && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-secondary/50 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-full text-sm shadow-md border border-gray-200/50">
-            💡 Click anywhere on the map to add a location
+          <div className="rounded-full border border-white/40 bg-white/80 px-5 py-3 text-sm font-medium text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
+            💡 Tap the map or search to drop your first waypoint
           </div>
         </div>
       )}
@@ -419,4 +461,3 @@ export default function MapPage() {
     </div>
   );
 }
-
