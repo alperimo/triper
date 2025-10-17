@@ -141,3 +141,13 @@ body {
     background: rgba(107, 142, 35, 0.2);
   }
 }
+
+@layer components {
+  .wallet-adapter-button-trigger {
+    background: transparent !important;
+  }
+
+  .wallet-adapter-button:not([disabled]):hover {
+    background-color: transparent !important;
+  }
+}
