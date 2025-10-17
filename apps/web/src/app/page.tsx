@@ -171,7 +171,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-6">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Trusted pilots</p>
-                <p className="text-lg font-semibold text-gray-900">MPC Labs • Arcium • Solana Voyager Guild</p>
+                <p className="text-lg font-semibold text-gray-900">Arcium • Solana</p>
               </div>
               <div className="h-12 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
               <div>
@@ -365,13 +365,13 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} Triper. Built for explorers, powered by encrypted compute.</p>
           <div className="flex items-center gap-4">
-            <Link href="#features" className="hover:text-gray-800">
+            {/* <Link href="#features" className="hover:text-gray-800">
               Product
             </Link>
             <Link href="#faq" className="hover:text-gray-800">
               Privacy
-            </Link>
-            <Link href="mailto:hi@triper.xyz" className="hover:text-gray-800">
+            </Link> */}
+            <Link href="mailto:contact@triperapp.xyz" className="hover:text-gray-800">
               Contact
             </Link>
           </div>
