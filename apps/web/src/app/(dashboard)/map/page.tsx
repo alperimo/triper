@@ -63,6 +63,7 @@ export default function MapPage() {
     profile,
     ...routingConfig[profile],
   }));
+  const visibleRoutingOptions = routingOptions.filter(option => option.profile !== 'straight');
   const routePalette: Record<RoutingProfile, string> = {
     straight: '#334155',
     car: '#2563eb',
@@ -297,10 +298,10 @@ export default function MapPage() {
       )}
 
       {/* Routing Profile Selector */}
-      {hasAnyWaypoints && routingOptions.length > 0 && (
+      {hasAnyWaypoints && visibleRoutingOptions.length > 0 && (
         <div className="absolute top-4 right-4 z-30 space-y-3 rounded-[26px] border border-white/40 bg-white/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur">
           <div className="flex flex-col gap-3">
-            {routingOptions.map(({ profile, label, sublabel, gradient, icon: Icon }) => {
+            {visibleRoutingOptions.map(({ profile, label, sublabel, gradient, icon: Icon }) => {
               const isActive = routingProfile === profile;
               return (
                 <button
