@@ -18,62 +18,61 @@ import {
 
 const featureHighlights = [
   {
-    title: 'Encrypted Location Graph',
+    title: 'Private Route Builder',
     description:
-      'Elite-grade MPC keeps every waypoint private while still letting you discover overlapping journeys.',
+      'Create detailed routes, set date windows between stops, and decide how precise each waypoint should be — all encrypted end-to-end.',
     icon: ShieldCheckIcon,
-    stat: 'Zero-knowledge validated',
+    stat: 'Route data locked in MPC',
   },
   {
-    title: 'Adaptive Travel Matching',
+    title: 'Interest-Driven Matching',
     description:
-      'We blend proximity, travel styles, interests, and timing to surface companions you actually want to meet.',
+      'Tell Triper what you love — from food tours to trail runs — knowing every interest stays encrypted on your device.',
     icon: GlobeAltIcon,
-    stat: '92% relevancy in pilot',
+    stat: 'Client-side encryption',
   },
   {
-    title: 'Instant Trust Signals',
+    title: 'Meaningful Match Scores',
     description:
-      'Compatibility scores, encrypted references, and on-chain reputation make collaboration effortless.',
+      'See route overlap and interest alignment scores that explain every suggestion before you decide to connect.',
     icon: SparklesIcon,
-    stat: 'MPC verified credentials',
+    stat: 'Scores on secret data',
   },
 ];
 
 const workflowSteps = [
   {
-    title: 'Plot Your Route',
-    description: 'Drop encrypted waypoints, set travel windows, and choose how precise you want to be.',
+    title: 'Create Your Route',
+    description: 'Add legs, choose the dates between each stop, and adjust privacy for every waypoint with our open map.',
   },
   {
-    title: 'Secure Computation',
-    description: 'Arcium MPC aligns your plans with others without any location ever leaving your device.',
+    title: 'Set Your Interests',
+    description: 'Pick the interests, travel styles, and comfort levels that matter to you; we encrypt everything as soon as you save.',
   },
   {
-    title: 'Preview Matches',
-    description: 'Review private compatibility profiles, proximity bands, and shared interests.',
+    title: 'Encrypted Matchmaking',
+    description: 'Arcium MPC compares routes and interests inside its secure supercomputer and returns route and interest scores only.',
   },
   {
-    title: 'Mutual Reveal',
-    description: 'Accept to unlock full itineraries, contact details, and private group coordination.',
+    title: 'Consent & Connect',
+    description: 'Accept when the scores feel right. Only then do both travelers unlock each other’s routes and interest details.',
   },
 ];
 
 const faqItems = [
   {
-    question: 'How private is my travel data?',
+    question: 'What does privacy-first matching mean for me?',
     answer:
-      'Every route is split into encrypted shards before computation. We only share obfuscated heatmaps until you mutually opt to reveal.',
+      'Your routes, dates, and interests are encrypted on your device before they ever leave your screen. Matching happens on Arcium MPC, so no one — including Triper — sees your exact data.',
   },
   {
-    question: 'Do I need to be crypto-native?',
-    answer:
-      'No jargon, no wallets required to explore. Connect Solana only when you are ready to match and anchor your reputation on-chain.',
+    question: 'Can I tweak my plans later?',
+    answer: 'Absolutely. Update a leg, change a date window, or refresh your interests whenever you like and Triper recomputes the scores instantly.',
   },
   {
-    question: 'What if I change my plans?',
+    question: 'When do other travelers see my details?',
     answer:
-      'Update your trip at any time. Triper re-computes matches in real time and instantly withdraws details you previously revealed.',
+      'Only after both sides accept a match. Until then, travelers see anonymized route and interest scores — never your exact itinerary or profile.',
   },
 ];
 
@@ -158,14 +157,14 @@ export default function Home() {
           >
             <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
               <LockClosedIcon className="h-4 w-4 text-primary" />
-              <span>Private-by-default travel coordination</span>
+              <span>Encrypted routes, interests, and matches from the start</span>
             </div>
             <h1 className="text-5xl leading-tight text-gray-900 sm:text-6xl">
-              Find your <span className="text-primary">ideal travel companions</span> without compromising your location.
+              Find your <span className="text-primary">ideal travel companions</span> without ever exposing your exact route.
             </h1>
             <p className="max-w-xl text-lg text-gray-600">
-              Triper is the encrypted social layer for explorers. Plan routes, surface high-intent matches, and unlock details only when you
-              both feel ready.
+              Triper is the privacy-first travel companion matcher built on Solana and Arcium MPC. Create your route, choose dates between each leg,
+              define your interests, and receive route and interest scores — all before sharing a single precise location.
             </p>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -261,8 +260,8 @@ export default function Home() {
               Built for travelers who care about privacy, chemistry, and control.
             </motion.h2>
             <p className="mx-auto max-w-2xl text-base text-gray-600">
-              Every interaction runs through encrypted compute, giving you human-grade insights without exposure. It is the secure layer
-              your group trips and solo adventures have been missing.
+              Every route, date, and interest is encrypted client-side, and matching happens on secret data inside Arcium MPC. Even our open-source
+              map layer keeps your journey private — no external APIs, no data brokers.
             </p>
           </div>
 
@@ -337,7 +336,7 @@ export default function Home() {
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.35em] text-primary">Encrypted matchmaking</p>
               <h3 className="text-2xl font-semibold text-gray-900">
-                3x faster matches with zero location leakage — powered by Arcium MPC.
+                Get route overlap and interest alignment scores in seconds — powered by Arcium MPC.
               </h3>
             </div>
             <Link
