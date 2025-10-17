@@ -43,7 +43,9 @@ export interface MapViewProps {
   /** H3 cells to display (for privacy-blurred locations) */
   h3Cells?: Array<{ h3Index: H3Index; color?: string; opacity?: number }>;
   /** Markers to display */
-  markers?: Array<{ lng: number; lat: number; label?: string; color?: string }>;
+  markers?: Array<{ lng: number; lat: number; label?: string; color?: string; id?: string; draggable?: boolean }>;
+  /** Callback when a marker is dragged */
+  onMarkerDrag?: (markerId: string, lng: number, lat: number) => void;
   /** Route lines to display between waypoints */
   routeLines?: Array<{ coordinates: [number, number][]; color?: string; width?: number }>;
   /** Children to render on top of map */
@@ -85,6 +87,7 @@ export function MapView({
   showControls = true,
   h3Cells = [],
   markers = [],
+  onMarkerDrag,
   routeLines = [],
   children,
 }: MapViewProps) {
@@ -248,13 +251,19 @@ export function MapView({
         {/* Regular markers */}
         {markers.map((marker, idx) => (
           <Marker
-            key={`marker-${idx}`}
+            key={marker.id || `marker-${idx}`}
             longitude={marker.lng}
             latitude={marker.lat}
             anchor="bottom"
+            draggable={marker.draggable !== false} // Draggable by default
+            onDragEnd={(e) => {
+              if (onMarkerDrag && marker.id) {
+                onMarkerDrag(marker.id, e.lngLat.lng, e.lngLat.lat);
+              }
+            }}
           >
             <div
-              className="flex flex-col items-center"
+              className="flex flex-col items-center cursor-grab active:cursor-grabbing"
               style={{ color: marker.color || '#ef4444' }}
             >
               <svg

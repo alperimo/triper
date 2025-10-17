@@ -233,6 +233,57 @@ export default function MapPage() {
     return [];
   }, [routeCoordinates, routingProfile]);
 
+  // Handle marker drag to update waypoint position
+  const handleMarkerDrag = useCallback(async (markerId: string, lng: number, lat: number) => {
+    // Handle pending pin drag
+    if (markerId === 'pending' && pendingPin) {
+      const location = await reverseGeocode(lat, lng);
+      
+      setPendingPin({
+        name: location.name,
+        address: location.address,
+        lat: location.lat,
+        lng: location.lng,
+      });
+      
+      navigateToLocation(lat, lng);
+      return;
+    }
+    
+    // Find which waypoint was dragged
+    const waypointIndex = waypoints.findIndex(w => w.id === markerId);
+    
+    if (waypointIndex !== -1) {
+      // Reverse geocode the new position to get location name
+      const location = await reverseGeocode(lat, lng);
+      
+      // Update the waypoint
+      const updatedWaypoints = [...waypoints];
+      updatedWaypoints[waypointIndex] = {
+        ...updatedWaypoints[waypointIndex],
+        lat: location.lat,
+        lng: location.lng,
+        name: location.name,
+        address: location.address,
+      };
+      
+      setWaypoints(updatedWaypoints);
+    }
+    
+    // Check if destination was dragged
+    if (destination && destination.id === markerId) {
+      const location = await reverseGeocode(lat, lng);
+      
+      setDestination({
+        ...destination,
+        lat: location.lat,
+        lng: location.lng,
+        name: location.name,
+        address: location.address,
+      });
+    }
+  }, [waypoints, destination, pendingPin, navigateToLocation]);
+
   return (
     <div className="relative h-full w-full">
       {/* Search Bar - Only show when no waypoints and no pending pin */}
@@ -431,30 +482,37 @@ export default function MapPage() {
         initialCenter={mapCenter || [-122.45, 37.78]}
         initialZoom={mapCenter ? 15 : 10}
         onClick={handleMapClick}
+        onMarkerDrag={handleMarkerDrag}
         // Pass route lines connecting waypoints
         routeLines={routeLines}
         // Pass waypoints and pending pin as markers
         markers={[
-          // Pending pin (yellow/orange with next waypoint number)
+          // Pending pin (yellow/orange with next waypoint number, draggable)
           ...(pendingPin ? [{
+            id: 'pending',
             lng: pendingPin.lng,
             lat: pendingPin.lat,
             label: `${waypoints.length + 1}`, // Show what number it will be
             color: '#f59e0b',
+            draggable: true, // Allow dragging pending pin to adjust position
           }] : []),
-          // Waypoints (green with numbers)
+          // Waypoints (green with numbers, draggable)
           ...waypoints.map((w, i) => ({
+            id: w.id,
             lng: w.lng,
             lat: w.lat,
             label: `${i + 1}`,
             color: '#6b8e23',
+            draggable: true,
           })),
-          // Destination (red)
+          // Destination (red, draggable)
           ...(destination ? [{
+            id: destination.id,
             lng: destination.lng,
             lat: destination.lat,
             label: '🎯',
             color: '#ef4444',
+            draggable: true,
           }] : []),
         ]}
       />
