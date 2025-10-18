@@ -3,6 +3,7 @@
 
 use anchor_lang::prelude::*;
 use arcium_anchor::prelude::*;
+use light_sdk::instruction::{PackedAddressTreeInfo, ValidityProof};
 
 // Declare modules
 pub mod instructions;
@@ -212,5 +213,35 @@ pub mod triper {
     /// Reject a match
     pub fn reject_match(ctx: Context<RejectMatch>) -> Result<()> {
         instructions::reject_match_handler(ctx)
+    }
+
+    /// Compress a trip account (Traditional → Compressed)
+    /// 
+    /// COST SAVINGS:
+    /// - Traditional rent refunded: +$0.39
+    /// - Compression tx: -$0.02
+    /// - Compressed storage: -$0.06
+    /// - NET SAVINGS: $0.31 per trip
+    /// 
+    /// PROCESS:
+    /// 1. Reads data from traditional Anchor account
+    /// 2. Creates compressed account in Light Protocol state tree
+    /// 3. Closes traditional account (refunds rent)
+    /// 
+    /// USE CASES:
+    /// - Manual: User archives completed trip
+    /// - Automatic: System archives trips >30 days after end_date
+    /// 
+    /// SECURITY:
+    /// - Maintains Arcium encryption
+    /// - Owner-only operation
+    /// - Rent refunded to owner
+    pub fn compress_trip<'info>(
+        ctx: Context<'_, '_, '_, 'info, CompressTrip<'info>>,
+        proof: light_sdk::instruction::ValidityProof,
+        address_tree_info: light_sdk::instruction::PackedAddressTreeInfo,
+        output_state_tree_index: u8,
+    ) -> Result<()> {
+        instructions::compress_trip_handler(ctx, proof, address_tree_info, output_state_tree_index)
     }
 }

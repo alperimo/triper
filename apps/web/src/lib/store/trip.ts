@@ -4,6 +4,7 @@ import type { Trip } from '@/types';
 interface TripState {
   currentTrip: Trip | null;
   myTrips: Trip[];
+  archivedTrips: Trip[];
   isCreating: boolean;
   
   // Actions
@@ -13,6 +14,7 @@ interface TripState {
   removeTrip: (tripId: string) => void;
   setCreating: (creating: boolean) => void;
   setMyTrips: (trips: Trip[]) => void;
+  setArchivedTrips: (trips: Trip[]) => void;
 }
 
 // Helper to get trips array
@@ -21,6 +23,7 @@ export const getTrips = (state: TripState) => state.myTrips;
 export const useTripStore = create<TripState>((set) => ({
   currentTrip: null,
   myTrips: [],
+  archivedTrips: [],
   isCreating: false,
   
   setCurrentTrip: (trip) => set({ currentTrip: trip }),
@@ -47,4 +50,6 @@ export const useTripStore = create<TripState>((set) => ({
   setCreating: (creating) => set({ isCreating: creating }),
   
   setMyTrips: (trips) => set({ myTrips: trips }),
+  
+  setArchivedTrips: (trips) => set({ archivedTrips: trips }),
 }));

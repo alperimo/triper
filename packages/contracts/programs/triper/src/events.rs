@@ -123,3 +123,26 @@ pub struct UserProfileUpdated {
     pub updated_at: i64,
 }
 
+/// Emitted when a trip is compressed from traditional to Light Protocol storage
+/// Frontend can use this to track address mapping: traditional_pda → compressed_address
+#[event]
+pub struct TripCompressed {
+    /// Original traditional trip PDA (now closed)
+    pub traditional_pda: Pubkey,
+    
+    /// New compressed account address in Light Protocol state tree
+    pub compressed_address: Pubkey,
+    
+    /// Trip owner
+    pub owner: Pubkey,
+    
+    /// Trip start date (can be used to rebuild traditional PDA if needed)
+    pub start_date: i64,
+    
+    /// Lamports saved from rent refund
+    pub rent_refunded: u64,
+    
+    /// Compression timestamp
+    pub timestamp: i64,
+}
+
