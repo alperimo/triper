@@ -11,7 +11,7 @@
 
 'use client';
 
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import Map, { 
   MapRef,
   NavigationControl,
@@ -23,11 +23,12 @@ import Map, {
   Marker,
 } from 'react-map-gl/maplibre';
 import type { ViewState, MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import type { StyleSpecification } from 'maplibre-gl';
 import { cellToBoundary } from 'h3-js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMatchStore } from '@/lib/store/match';
-import { h3CellToLatLng } from '@/lib/geo/h3';
 import type { H3Index } from '@/types';
+import triperRadiantStyle from './styles/triper-radiant.json';
 
 export interface MapViewProps {
   /** Initial center of the map [lng, lat] */
@@ -75,6 +76,73 @@ const OSM_MAP_STYLE = {
     },
   ],
 } as any;
+
+function resolveStyleUrlWithKey(
+  url: string | undefined,
+  key: string | undefined
+): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  const hasPlaceholder =
+    url.includes('{MAPTILER_API_KEY}') || url.includes('{MAPTILER_KEY}');
+
+  if (!hasPlaceholder) {
+    return url;
+  }
+
+  if (!key) {
+    return undefined;
+  }
+
+  return url.replace(/\{MAPTILER_API_KEY\}|\{MAPTILER_KEY\}/g, key);
+}
+
+function applyStyleToken(
+  template: unknown,
+  token: string,
+  replacement: string
+): unknown {
+  if (Array.isArray(template)) {
+    return template.map((item) => applyStyleToken(item, token, replacement));
+  }
+
+  if (template && typeof template === 'object') {
+    return Object.entries(template as Record<string, unknown>).reduce(
+      (acc, [entryKey, entryValue]) => {
+        acc[entryKey] = applyStyleToken(entryValue, token, replacement);
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }
+
+  if (typeof template === 'string') {
+    return template.includes(token)
+      ? template.split(token).join(replacement)
+      : template;
+  }
+
+  return template;
+}
+
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+const RAW_MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL;
+
+const ENV_STYLE_URL = resolveStyleUrlWithKey(RAW_MAP_STYLE_URL, MAPTILER_KEY);
+
+const CUSTOM_TRIPER_STYLE: StyleSpecification | null = MAPTILER_KEY
+  ? (applyStyleToken(
+      triperRadiantStyle,
+      '{MAPTILER_KEY}',
+      MAPTILER_KEY
+    ) as StyleSpecification)
+  : null;
+
+// Precompute the map style so the map renders even without MapTiler configuration.
+const RESOLVED_MAP_STYLE: string | StyleSpecification =
+  ENV_STYLE_URL ?? CUSTOM_TRIPER_STYLE ?? (OSM_MAP_STYLE as StyleSpecification);
 
 /**
  * MapView component with MapLibre GL + H3 support
@@ -179,7 +247,7 @@ export function MapView({
         {...viewState}
         onMove={handleMove}
         onClick={handleClick}
-        mapStyle={OSM_MAP_STYLE}
+        mapStyle={RESOLVED_MAP_STYLE}
         attributionControl={false}
         reuseMaps
         style={{ width: '100%', height: '100%' }}
@@ -354,4 +422,3 @@ export function useMapRef() {
   
   return { mapRef, getMap, flyTo, fitBounds };
 }
-

@@ -513,7 +513,7 @@ export default function MapPage() {
       {!pendingPin && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none md:bottom-8">
           <div className="rounded-full border border-white/40 bg-white/80 px-5 py-3 text-sm font-medium text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
-            💡 Tap the map or search to drop a waypoint
+            Tap the map or search to drop a waypoint
           </div>
         </div>
       )}
