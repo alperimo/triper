@@ -332,10 +332,10 @@ export default function MapPage() {
   }, [isDesktopPanelCollapsed]);
 
   return (
-    <div ref={rootContainerRef} className="relative h-full w-full">
+    <div ref={rootContainerRef} className="absolute inset-0">
       {/* Search Bar - Only show when no waypoints and no pending pin */}
       {showSearchBar && (
-        <div className="absolute top-4 left-4 right-4 z-20 md:right-auto md:w-96">
+        <div className="absolute top-24 left-4 right-4 z-20 md:top-28 md:right-auto md:w-96">
           <RouteSearchBar
             onSelectLocation={handleSearchSelect}
             placeholder="Search for places..."
@@ -345,7 +345,7 @@ export default function MapPage() {
 
       {/* Routing Profile Selector */}
       {hasAnyWaypoints && visibleRoutingOptions.length > 0 && (
-        <div className="absolute top-4 right-4 z-30 space-y-3 rounded-[26px] border border-white/40 bg-white/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur">
+        <div className="absolute top-24 right-4 z-30 space-y-3 rounded-[26px] border border-white/40 bg-white/80 p-4 shadow-[var(--shadow-soft)] backdrop-blur md:top-28">
           <div className="flex flex-col gap-3">
             {visibleRoutingOptions.map(({ profile, label, sublabel, gradient, icon: Icon }) => {
               const isActive = routingProfile === profile;
@@ -412,7 +412,7 @@ export default function MapPage() {
         {/* Desktop Panel - Slides in/out from left */}
         <div
           ref={desktopPanelRef}
-          className={`hidden md:block absolute top-4 z-20 w-96 transition-all duration-300 ${
+          className={`hidden md:block absolute top-24 z-20 w-96 transition-all duration-300 ${
             isDesktopPanelCollapsed ? '-left-96' : 'left-4'
           }`}
         >
@@ -474,7 +474,7 @@ export default function MapPage() {
 
       {/* Create Trip Button - Bottom Right */}
       {hasRoute && (
-        <div className="absolute bottom-8 right-8 z-20 flex">
+        <div className="absolute bottom-20 right-8 z-20 flex md:bottom-8">
           <button
             onClick={handleCreateTrip}
             disabled={loading || waypoints.length === 0 || !destination}
@@ -511,7 +511,7 @@ export default function MapPage() {
 
       {/* Click-to-add hint - Show at bottom center when no pending pin */}
       {!pendingPin && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none md:bottom-8">
           <div className="rounded-full border border-white/40 bg-white/80 px-5 py-3 text-sm font-medium text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
             💡 Tap the map or search to drop a waypoint
           </div>
