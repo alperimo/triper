@@ -188,7 +188,7 @@ export default function MapPage() {
   const hasRoute = waypoints.length > 0 || destination;
   const hasAnyWaypoints = waypoints.length > 0;
   const totalStops = waypoints.length + (destination ? 1 : 0);
-  const showSearchBar = !hasAnyWaypoints && !pendingPin && isDesktopPanelCollapsed && isPanelCollapsed; // Show map search when no waypoints, no pending pin, and route planner is closed
+  const showSearchBar = !pendingPin && isDesktopPanelCollapsed && isPanelCollapsed; // Show map search when no pending pin and route planner is closed
 
   // Fetch route when waypoints or routing profile changes
   useEffect(() => {
