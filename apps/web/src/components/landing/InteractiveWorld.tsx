@@ -207,7 +207,7 @@ export function InteractiveWorld({ className }: InteractiveWorldProps = {}) {
         <motion.svg
           width="1200"
           height="600"
-          viewBox="0 0 1200 600"
+          viewBox="0 40 1200 600"
           preserveAspectRatio="xMidYMid slice"
           className="h-[120%] w-[120%] text-primary"
           style={{ transform: sceneTransform }}

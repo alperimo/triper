@@ -101,11 +101,11 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div className="relative min-h-screen overflow-x-hidden bg-white">
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-y-0 left-[-10%] w-[55%] bg-[radial-gradient(circle_at_top,rgba(107,142,35,0.25),transparent_65%)] blur-3xl" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45%] h-[60%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.18),transparent_55%)] blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/60 to-transparent" />
+        <div className="absolute inset-y-0 left-[-10%] w-[55%] bg-[radial-gradient(circle_at_top,rgba(107,142,35,0.12),transparent_70%)] blur-3xl" />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45%] h-[60%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_60%)] blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-white/95 to-white/90" />
       </div>
 
       <header className="relative z-30">
@@ -144,7 +144,7 @@ export default function Home() {
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white via-white/60 to-transparent" aria-hidden />
           </div>
 
-          <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-end pb-16 text-center sm:pb-20">
+          <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-end pb-8 text-center sm:pb-12">
             <motion.div
               initial={{ opacity: 0, y: 36 }}
               animate={{ opacity: 1, y: 0 }}
@@ -157,10 +157,10 @@ export default function Home() {
                   <span className="text-gray-600">Encrypted by design</span>
                 </div>
                 <h1 className="text-3xl font-semibold leading-tight text-gray-900 sm:text-4xl lg:text-5xl">
-                  Journey together, stay undiscovered.
+                  Journey together, stay private.
                 </h1>
                 <p className="max-w-2xl text-sm text-gray-600 sm:text-base">
-                  Spark private travel matches on a living world map that reacts to every move — while your exact route stays sealed in MPC.
+                  Find your perfect travel companions on an interactive world map — while keeping your exact plans and interests completely private.
                 </p>
                 <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
                   <div className="flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-primary-hover px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
@@ -175,31 +175,11 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: 'easeOut', delay: 0.55 }}
-                className="flex flex-wrap items-center justify-center gap-4 text-left text-xs font-medium text-gray-600"
-              >
-                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
-                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Trusted pilots</p>
-                  <p className="text-sm font-semibold text-gray-900">Arcium • Solana</p>
-                </div>
-                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
-                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Match time</p>
-                  <p className="text-sm font-semibold text-gray-900">Under 12 seconds end-to-end</p>
-                </div>
-                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
-                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Privacy radius</p>
-                  <p className="text-sm font-semibold text-gray-900">Configurable per waypoint</p>
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 pt-20 sm:pt-28">
+        <section className="mx-auto max-w-6xl px-6 pt-16 sm:pt-20">
           <div className="grid gap-12 lg:grid-cols-[1.05fr_minmax(0,0.95fr)] lg:items-center">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
@@ -215,17 +195,17 @@ export default function Home() {
                 Find your <span className="text-primary">ideal travel companions</span> without exposing your itinerary.
               </h2>
               <p className="text-base text-gray-600 sm:text-lg">
-                Triper is the privacy-first travel companion matcher built on Solana and Arcium MPC. Plot flexible routes, set per-leg privacy,
-                declare your interests, and receive interpretive compatibility scores — long before anyone sees your exact path.
+                Triper is the privacy-first travel companion matcher built on Solana using Arcium's supercomputer. Plot flexible routes, set per-leg dates,
+                declare your interests, and receive interpretive compatibility scores — long before your travel partners see your exact path.
               </p>
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-[var(--shadow-soft)] backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">You control precision</p>
-                  <p className="mt-2 text-sm text-gray-600">Blur exact coordinates by distance cell or time window per waypoint.</p>
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Safe & Private</p>
+                  <p className="mt-2 text-sm text-gray-600">Your exact locations stay encrypted. Only you decide when and what to reveal to potential companions.</p>
                 </div>
                 <div className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-[var(--shadow-soft)] backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Explainable scores</p>
-                  <p className="mt-2 text-sm text-gray-600">Route overlap and interest resonance make every match transparent.</p>
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Smart Compatibility</p>
+                  <p className="mt-2 text-sm text-gray-600">Get clear scores showing route overlap and interest alignment — so you connect with the right travelers.</p>
                 </div>
               </div>
             </motion.div>
@@ -243,7 +223,7 @@ export default function Home() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Live route preview</p>
-                      <p className="text-xl font-semibold text-gray-900">Encrypted match radius</p>
+                      <p className="text-xl font-semibold text-gray-900">Your Private Journey</p>
                     </div>
                     <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Private</div>
                   </div>
@@ -255,24 +235,24 @@ export default function Home() {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900">{leg}</p>
-                          <p className="text-xs text-gray-500">Visibility: encrypted cell ±12km</p>
+                          <p className="text-xs text-gray-500">Visibility: Private</p>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="rounded-2xl border border-white/60 bg-white/85 px-4 py-4 text-sm font-medium text-primary shadow-[var(--shadow-soft)]">
-                    🔐 MPC running — compatibility match 88% with 3 travelers on similar routes.
+                    🔐 Matching in progress — 88% compatibility with 3 travelers on similar routes.
                   </div>
                 </div>
               </div>
 
               <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border border-white/70 bg-white/90 p-5 text-sm text-gray-700 shadow-[0_25px_70px_-5px_rgba(0,0,0,0.25),0_10px_30px_-10px_rgba(0,0,0,0.2)] backdrop-blur-xl">
                 <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-                  <span>Assurance</span>
+                  <span>Security</span>
                   <span className="text-green-500">High</span>
                 </div>
-                <p className="font-semibold text-gray-900">Zero-knowledge proof complete.</p>
-                <p className="mt-1 text-xs text-gray-500">Your coordinates never leave the enclave.</p>
+                <p className="font-semibold text-gray-900">Fully encrypted and secure.</p>
+                <p className="mt-1 text-xs text-gray-500">Your exact locations stay completely private.</p>
               </div>
             </motion.div>
           </div>
@@ -414,7 +394,7 @@ export default function Home() {
 
       <footer className="relative z-20 border-t border-white/40 bg-white/70">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} Triper. Built for explorers, powered by encrypted compute.</p>
+          <p>© {new Date().getFullYear()} Triper. Built for explorers.</p>
           <div className="flex items-center gap-4">
             {/* <Link href="#features" className="hover:text-gray-800">
               Product
