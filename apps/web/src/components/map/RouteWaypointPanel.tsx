@@ -172,7 +172,7 @@ export function RouteWaypointPanel({
     ? `${waypoints.length} waypoint${waypoints.length === 1 ? '' : 's'}${destination ? ' + destination' : ''}`
     : 'Drop encrypted points to begin planning';
   const showEmptyState = waypoints.length === 0 && !destination && !hasPendingPin && !expandedSearch;
-  const desktopMaxHeight = 'min(85vh, calc(100vh - 5rem))';
+  const desktopMaxHeight = 'calc(100vh - 14rem)';
   const containerMaxHeight = isMobile ? (isCollapsed ? 'auto' : '80vh') : desktopMaxHeight;
 
   return (
@@ -193,7 +193,7 @@ export function RouteWaypointPanel({
         </button>
       )}
 
-      <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Route Planner</h3>
           <p className="text-xs text-gray-500">{headerSubtitle}</p>
