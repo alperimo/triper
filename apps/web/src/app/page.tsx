@@ -1,5 +1,6 @@
 'use client';
 
+import { InteractiveWorld } from '@/components/landing/InteractiveWorld';
 import { WalletButton } from '@/components/wallet/WalletButton';
 import { useUserStore } from '@/lib/store/user';
 import { motion } from 'framer-motion';
@@ -136,95 +137,145 @@ export default function Home() {
       </header>
 
       <main className="relative z-20 pb-32">
-        <section className="mx-auto flex min-h-[70vh] max-w-6xl flex-col gap-16 px-6 pt-12 lg:flex-row lg:items-center lg:pt-16">
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="flex-1 space-y-8"
-          >
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-gray-600 shadow-[var(--shadow-soft)] backdrop-blur">
-              <LockClosedIcon className="h-4 w-4 text-primary" />
-              <span>Encrypted routes, interests, and matches from the start</span>
-            </div>
-            <h1 className="text-5xl leading-tight text-gray-900 sm:text-6xl">
-              Find your <span className="text-primary">ideal travel companions</span> without ever exposing your exact route.
-            </h1>
-            <p className="max-w-xl text-lg text-gray-600">
-              Triper is the privacy-first travel companion matcher built on Solana and Arcium MPC. Create your route, choose dates between each leg,
-              define your interests, and receive route and interest scores — all before sharing a single precise location.
-            </p>
+        <section className="relative isolate min-h-screen overflow-hidden px-4 pt-6 sm:px-6 sm:pt-10 lg:px-8">
+          <div className="absolute inset-0">
+            <InteractiveWorld className="rounded-none" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white via-white/70 to-transparent" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white via-white/60 to-transparent" aria-hidden />
+          </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-3 rounded-full bg-gradient-to-r from-primary to-primary-hover px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
-                <WalletButton />
-              </div>
-              <Link
-                href="#features"
-                className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
-              >
-                See what makes Triper different
-                <ArrowRightIcon className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Trusted pilots</p>
-                <p className="text-lg font-semibold text-gray-900">Arcium • Solana</p>
-              </div>
-              <div className="h-12 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Match time</p>
-                <p className="text-lg font-semibold text-gray-900">Under 12 seconds end-to-end</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 48 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-            className="relative flex-1"
-          >
-            <div className="absolute inset-0 -z-10 rounded-[40px] bg-gradient-to-br from-primary/30 via-emerald-200/40 to-white blur-3xl" />
-            <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-white/80 shadow-[var(--shadow-card)] backdrop-blur-xl">
-              <div className="flex flex-col gap-8 p-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Live route preview</p>
-                    <p className="text-xl font-semibold text-gray-900">Encrypted match radius</p>
+          <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-end pb-16 text-center sm:pb-20">
+            <motion.div
+              initial={{ opacity: 0, y: 36 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut', delay: 0.25 }}
+              className="pointer-events-none flex w-full flex-col items-center gap-6"
+            >
+              <div className="pointer-events-auto flex w-full max-w-xl flex-col items-center gap-5 rounded-[32px] border border-white/50 bg-white/60 px-6 py-7 text-center shadow-[var(--shadow-soft)] backdrop-blur-xl">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.38em] text-primary">
+                  <LockClosedIcon className="h-4 w-4 text-primary" />
+                  <span className="text-gray-600">Encrypted by design</span>
+                </div>
+                <h1 className="text-3xl font-semibold leading-tight text-gray-900 sm:text-4xl lg:text-5xl">
+                  Journey together, stay undiscovered.
+                </h1>
+                <p className="max-w-2xl text-sm text-gray-600 sm:text-base">
+                  Spark private travel matches on a living world map that reacts to every move — while your exact route stays sealed in MPC.
+                </p>
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+                  <div className="flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-primary-hover px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)]">
+                    <WalletButton />
                   </div>
-                  <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Private</div>
-                </div>
-                <div className="space-y-5">
-                  {['Lisbon → Porto', 'Porto → Vigo', 'Vigo → Santiago'].map((leg, index) => (
-                    <div key={leg} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white/60 px-4 py-3 shadow-sm">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15 text-sm font-semibold text-primary">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{leg}</p>
-                        <p className="text-xs text-gray-500">Visibility: encrypted cell ±12km</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-2xl border border-white/50 bg-white/85 px-4 py-4 text-sm font-medium text-primary shadow-[var(--shadow-soft)]">
-                  🔐 MPC running — compatibility match 88% with 3 travelers on similar routes.
+                  <Link
+                    href="#features"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-white/70 bg-white/60 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-white/90 hover:text-gray-900"
+                  >
+                    Explore the experience
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
-            </div>
 
-            <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border-2 border-gray-200/80 bg-white p-5 text-sm text-gray-700 shadow-[0_25px_70px_-5px_rgba(0,0,0,0.25),0_10px_30px_-10px_rgba(0,0,0,0.2)] backdrop-blur-xl">
-              <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-                <span>Assurance</span>
-                <span className="text-green-500">High</span>
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut', delay: 0.55 }}
+                className="flex flex-wrap items-center justify-center gap-4 text-left text-xs font-medium text-gray-600"
+              >
+                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
+                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Trusted pilots</p>
+                  <p className="text-sm font-semibold text-gray-900">Arcium • Solana</p>
+                </div>
+                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
+                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Match time</p>
+                  <p className="text-sm font-semibold text-gray-900">Under 12 seconds end-to-end</p>
+                </div>
+                <div className="rounded-full border border-white/60 bg-white/65 px-4 py-2 shadow-[var(--shadow-soft)] backdrop-blur">
+                  <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500">Privacy radius</p>
+                  <p className="text-sm font-semibold text-gray-900">Configurable per waypoint</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-6 pt-20 sm:pt-28">
+          <div className="grid gap-12 lg:grid-cols-[1.05fr_minmax(0,0.95fr)] lg:items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="space-y-6"
+            >
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-primary shadow-[var(--shadow-soft)] backdrop-blur">
+                Private route builder
               </div>
-              <p className="font-semibold text-gray-900">Zero-knowledge proof complete.</p>
-              <p className="mt-1 text-xs text-gray-500">Your coordinates never leave the enclave.</p>
-            </div>
-          </motion.div>
+              <h2 className="text-4xl text-gray-900 sm:text-5xl">
+                Find your <span className="text-primary">ideal travel companions</span> without exposing your itinerary.
+              </h2>
+              <p className="text-base text-gray-600 sm:text-lg">
+                Triper is the privacy-first travel companion matcher built on Solana and Arcium MPC. Plot flexible routes, set per-leg privacy,
+                declare your interests, and receive interpretive compatibility scores — long before anyone sees your exact path.
+              </p>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-[var(--shadow-soft)] backdrop-blur">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">You control precision</p>
+                  <p className="mt-2 text-sm text-gray-600">Blur exact coordinates by distance cell or time window per waypoint.</p>
+                </div>
+                <div className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-[var(--shadow-soft)] backdrop-blur">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Explainable scores</p>
+                  <p className="mt-2 text-sm text-gray-600">Route overlap and interest resonance make every match transparent.</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 36 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+              className="relative"
+            >
+              <div className="absolute inset-0 -z-10 rounded-[44px] bg-gradient-to-br from-primary/20 via-emerald-200/30 to-white blur-3xl" />
+              <div className="relative overflow-hidden rounded-[36px] border border-white/60 bg-white/80 shadow-[var(--shadow-card)] backdrop-blur-xl">
+                <div className="flex flex-col gap-7 p-8">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Live route preview</p>
+                      <p className="text-xl font-semibold text-gray-900">Encrypted match radius</p>
+                    </div>
+                    <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Private</div>
+                  </div>
+                  <div className="space-y-5">
+                    {['Lisbon → Porto', 'Porto → Vigo', 'Vigo → Santiago'].map((leg, index) => (
+                      <div key={leg} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white/70 px-4 py-3 shadow-sm">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15 text-sm font-semibold text-primary">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{leg}</p>
+                          <p className="text-xs text-gray-500">Visibility: encrypted cell ±12km</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-2xl border border-white/60 bg-white/85 px-4 py-4 text-sm font-medium text-primary shadow-[var(--shadow-soft)]">
+                    🔐 MPC running — compatibility match 88% with 3 travelers on similar routes.
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute -bottom-20 -right-6 w-48 rounded-3xl border border-white/70 bg-white/90 p-5 text-sm text-gray-700 shadow-[0_25px_70px_-5px_rgba(0,0,0,0.25),0_10px_30px_-10px_rgba(0,0,0,0.2)] backdrop-blur-xl">
+                <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>Assurance</span>
+                  <span className="text-green-500">High</span>
+                </div>
+                <p className="font-semibold text-gray-900">Zero-knowledge proof complete.</p>
+                <p className="mt-1 text-xs text-gray-500">Your coordinates never leave the enclave.</p>
+              </div>
+            </motion.div>
+          </div>
         </section>
 
         <section id="features" className="mx-auto max-w-6xl px-6 py-24">
