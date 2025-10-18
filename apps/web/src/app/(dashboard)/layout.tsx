@@ -40,21 +40,13 @@ export default function DashboardLayout({
         </div>
 
         <div className="relative flex w-full items-center justify-between px-4 py-3 sm:px-6">
-          {/* Brand */}
-          <Link href="/map" className="group flex items-center gap-3">
-            <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white/30 shadow-sm transition duration-300 group-hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-primary/15" />
-              <Image
-                src="/logo.svg"
-                alt="Triper Logo"
-                width={36}
-                height={36}
-                className="relative h-9 w-9 transition-opacity duration-300 group-hover:opacity-90"
-              />
+          {/* Brand - Landing page style */}
+          <Link href="/map" className="flex items-center gap-2">
+            <div className="relative h-12 w-12">
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md" />
+              <Image src="/logo.svg" alt="Triper Logo" fill className="relative rounded-2xl object-contain" />
             </div>
-            <span className="text-lg font-semibold text-gray-900 sm:text-xl">
-              Triper
-            </span>
+            <span className="text-sm font-semibold uppercase tracking-[0.35em] text-gray-900">Triper</span>
           </Link>
 
           {/* Desktop navigation */}
